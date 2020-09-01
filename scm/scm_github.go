@@ -1,9 +1,7 @@
 package scm
 
 import (
-	"github.com/packagrio/go-common/errors"
 	"github.com/packagrio/go-common/pipeline"
-	"os"
 )
 
 type scmGithub struct {
@@ -13,9 +11,9 @@ type scmGithub struct {
 func (g *scmGithub) Init(pipelineData *pipeline.Data) error {
 	g.PipelineData = pipelineData
 
-	if _, present := os.LookupEnv("GITHUB_TOKEN"); !present {
-		return errors.ScmAuthenticationFailed("Missing github access token")
-	}
+	//if _, present := os.LookupEnv("GITHUB_TOKEN"); !present {
+	//	return errors.ScmAuthenticationFailed("Missing github access token")
+	//}
 	//if g.Config.IsSet("scm_git_parent_path") {
 	//	g.PipelineData.GitParentPath = g.Config.GetString("scm_git_parent_path")
 	//	os.MkdirAll(g.PipelineData.GitParentPath, os.ModePerm)
