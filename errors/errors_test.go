@@ -1,7 +1,7 @@
 package errors_test
 
 import (
-	"github.com/analogj/capsulecd/pkg/errors"
+	"github.com/packagrio/go-common/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
