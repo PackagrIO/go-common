@@ -12,6 +12,14 @@ type Interface interface {
 	// MUST set pipelineData.GitParentPath
 	Init(pipelineData *pipeline.Data) error
 
+	// Determine if this is a pull request or a push.
+	// if it's a pull request the scm must retrieve the pull request payload and return it
+	// if its a push, the scm must retrieve the push payload and return it
+	// CAN NOT override
+	// MUST set pipelineData.IsPullRequest
+	// RETURNS scm.Payload
+	RetrievePayload() (*Payload, error)
+
 	// To set an environment variable for future out of process steps
 	SetEnvironmentalVariable(name string, value string) error
 

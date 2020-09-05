@@ -41,6 +41,10 @@ func (b *scmBitbucket) Init(pipelineData *pipeline.Data) error {
 	return nil
 }
 
+func (b *scmBitbucket) RetrievePayload() (*Payload, error) {
+	return nil, nil
+}
+
 func (b *scmBitbucket) SetEnvironmentalVariable(name string, value string) error {
 	return nil
 }

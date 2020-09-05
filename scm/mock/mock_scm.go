@@ -7,6 +7,7 @@ package mock_scm
 import (
 	gomock "github.com/golang/mock/gomock"
 	pipeline "github.com/packagrio/go-common/pipeline"
+	scm "github.com/packagrio/go-common/scm"
 	reflect "reflect"
 )
 
@@ -45,6 +46,21 @@ func (m *MockInterface) Init(pipelineData *pipeline.Data) error {
 func (mr *MockInterfaceMockRecorder) Init(pipelineData interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockInterface)(nil).Init), pipelineData)
+}
+
+// RetrievePayload mocks base method
+func (m *MockInterface) RetrievePayload() (*scm.Payload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RetrievePayload")
+	ret0, _ := ret[0].(*scm.Payload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RetrievePayload indicates an expected call of RetrievePayload
+func (mr *MockInterfaceMockRecorder) RetrievePayload() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetrievePayload", reflect.TypeOf((*MockInterface)(nil).RetrievePayload))
 }
 
 // SetEnvironmentalVariable mocks base method
