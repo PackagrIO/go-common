@@ -46,3 +46,59 @@ func (mr *MockInterfaceMockRecorder) Init(pipelineData interface{}) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockInterface)(nil).Init), pipelineData)
 }
+
+// SetEnvironmentalVariable mocks base method
+func (m *MockInterface) SetEnvironmentalVariable(name, value string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetEnvironmentalVariable", name, value)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetEnvironmentalVariable indicates an expected call of SetEnvironmentalVariable
+func (mr *MockInterfaceMockRecorder) SetEnvironmentalVariable(name, value interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetEnvironmentalVariable", reflect.TypeOf((*MockInterface)(nil).SetEnvironmentalVariable), name, value)
+}
+
+// AddPath mocks base method
+func (m *MockInterface) AddPath(path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddPath", path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddPath indicates an expected call of AddPath
+func (mr *MockInterfaceMockRecorder) AddPath(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPath", reflect.TypeOf((*MockInterface)(nil).AddPath), path)
+}
+
+// SetOutput mocks base method
+func (m *MockInterface) SetOutput(name, value string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetOutput", name, value)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetOutput indicates an expected call of SetOutput
+func (mr *MockInterfaceMockRecorder) SetOutput(name, value interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOutput", reflect.TypeOf((*MockInterface)(nil).SetOutput), name, value)
+}
+
+// MaskSecret mocks base method
+func (m *MockInterface) MaskSecret(secret string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MaskSecret", secret)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MaskSecret indicates an expected call of MaskSecret
+func (mr *MockInterfaceMockRecorder) MaskSecret(secret interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MaskSecret", reflect.TypeOf((*MockInterface)(nil).MaskSecret), secret)
+}

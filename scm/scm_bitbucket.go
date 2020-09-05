@@ -40,3 +40,22 @@ func (b *scmBitbucket) Init(pipelineData *pipeline.Data) error {
 
 	return nil
 }
+
+func (b *scmBitbucket) SetEnvironmentalVariable(name string, value string) error {
+	return nil
+}
+
+// To prepend a string to PATH
+func (b *scmBitbucket) AddPath(path string) error {
+	return nil
+}
+
+// To set an output for the step
+func (b *scmBitbucket) SetOutput(name string, value string) error {
+	return nil
+}
+
+// To mask a value in the logs
+func (b *scmBitbucket) MaskSecret(secret string) error {
+	return nil
+}

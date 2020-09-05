@@ -1,6 +1,7 @@
 package scm
 
 import (
+	"fmt"
 	"github.com/packagrio/go-common/pipeline"
 )
 
@@ -45,5 +46,30 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data) error {
 	//	g.Client.BaseURL = apiUrl
 	//}
 
+	return nil
+}
+
+// see https://github.com/actions/toolkit/blob/main/docs/commands.md
+
+func (g *scmGithub) SetEnvironmentalVariable(name string, value string) error {
+	fmt.Printf("\n::set-env name=%s::%s\n", name, value)
+	return nil
+}
+
+// To prepend a string to PATH
+func (g *scmGithub) AddPath(path string) error {
+	fmt.Printf("\n::add-path::%s\n", path)
+	return nil
+}
+
+// To set an output for the step
+func (g *scmGithub) SetOutput(name string, value string) error {
+	fmt.Printf("\n::set-output name=%s::%s\n", name, value)
+	return nil
+}
+
+// To mask a value in the logs
+func (g *scmGithub) MaskSecret(secret string) error {
+	fmt.Printf("\n::add-mask::%s\n", secret)
 	return nil
 }
