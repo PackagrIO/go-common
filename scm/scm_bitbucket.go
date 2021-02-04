@@ -1,7 +1,9 @@
 package scm
 
 import (
+	"github.com/packagrio/go-common/config"
 	"github.com/packagrio/go-common/pipeline"
+	"net/http"
 )
 
 type scmBitbucket struct {
@@ -11,7 +13,7 @@ type scmBitbucket struct {
 // configure method will generate an authenticated client that can be used to comunicate with Github
 // MUST set @git_parent_path
 // MUST set @client field
-func (b *scmBitbucket) Init(pipelineData *pipeline.Data) error {
+func (b *scmBitbucket) Init(pipelineData *pipeline.Data, myConfig config.BaseInterface, httpClient *http.Client) error {
 	b.PipelineData = pipelineData
 
 	//if !b.Config.IsSet("scm_bitbucket_username") {
@@ -43,6 +45,18 @@ func (b *scmBitbucket) Init(pipelineData *pipeline.Data) error {
 
 func (b *scmBitbucket) RetrievePayload() (*Payload, error) {
 	return nil, nil
+}
+
+func (b *scmBitbucket) Publish() error {
+	return nil
+}
+
+func (g *scmBitbucket) PublishAssets(releaseData interface{}) error {
+	return nil
+}
+
+func (g *scmBitbucket) Cleanup() error {
+	return nil
 }
 
 func (b *scmBitbucket) SetEnvironmentalVariable(name string, value string) error {

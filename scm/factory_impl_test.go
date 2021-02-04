@@ -14,3 +14,8 @@ func TestScmBitbucket(t *testing.T) {
 	eng := new(scmBitbucket)
 	require.Implements(t, (*Interface)(nil), eng, "should implement the Scm interface")
 }
+
+func TestScmGeneric(t *testing.T) {
+	eng := new(scmGeneric)
+	require.Implements(t, (*Interface)(nil), eng, "should implement the Scm interface")
+}

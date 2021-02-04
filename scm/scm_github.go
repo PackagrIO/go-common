@@ -1,183 +1,343 @@
 package scm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/analogj/go-util/utils"
 	"github.com/google/go-github/v32/github"
+	"github.com/packagrio/go-common/config"
 	"github.com/packagrio/go-common/errors"
 	"github.com/packagrio/go-common/pipeline"
+	githubHelper "github.com/packagrio/go-common/scm/github"
+	"github.com/packagrio/go-common/utils/git"
+	"golang.org/x/oauth2"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
 	"os"
-	"strconv"
+	"path"
+	"strings"
+	"time"
 )
-
-// TAKEN from: https://github.com/google/go-github/blob/master/github/event_types.go
-// TODO: this is not yet available in master, once it is, we should remove this Struct.
-//
-// WorkflowDispatchEvent is triggered when someone triggers a workflow run on GitHub or
-// sends a POST request to the create a workflow dispatch event endpoint.
-//
-// GitHub API docs: https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#workflow_dispatch
-type WorkflowDispatchEvent struct {
-	Inputs   json.RawMessage `json:"inputs,omitempty"`
-	Ref      *string         `json:"ref,omitempty"`
-	Workflow *string         `json:"workflow,omitempty"`
-
-	// The following fields are only populated by Webhook events.
-	Repo   *github.Repository   `json:"repository,omitempty"`
-	Org    *github.Organization `json:"organization,omitempty"`
-	Sender *github.User         `json:"sender,omitempty"`
-}
 
 type scmGithub struct {
 	PipelineData *pipeline.Data
+	Client       *github.Client
+	Config       config.BaseInterface
 }
 
-func (g *scmGithub) Init(pipelineData *pipeline.Data) error {
+func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterface, httpClient *http.Client) error {
 	g.PipelineData = pipelineData
+	g.Config = myConfig
+	g.Config.SetDefault(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN_TYPE, "user")
 
-	//if _, present := os.LookupEnv("GITHUB_TOKEN"); !present {
-	//	return errors.ScmAuthenticationFailed("Missing github access token")
-	//}
-	//if g.Config.IsSet("scm_git_parent_path") {
-	//	g.PipelineData.GitParentPath = g.Config.GetString("scm_git_parent_path")
-	//	os.MkdirAll(g.PipelineData.GitParentPath, os.ModePerm)
-	//} else {
-	//	dirPath, _ := ioutil.TempDir("", "")
-	//	g.PipelineData.GitParentPath = dirPath
-	//}
+	ctx := context.Background()
 
-	//if _, present := os.LookupEnv("GITHUB_ACTION"); !present {
-	//	//running as a github action.
-	//
-	//} else {
-	//	ctx := context.Background()
-	//	ts := oauth2.StaticTokenSource(
-	//		&oauth2.Token{AccessToken: g.Config.GetString("scm_github_access_token")},
-	//	)
-	//	tc := oauth2.NewClient(ctx, ts)
-	//
-	//	//TODO: autopaginate turned on.
-	//	g.Client = github.NewClient(tc)
-	//}
+	//TODO: autopaginate turned on.
+	if httpClient != nil {
+		//primarily used for testing.
+		g.Client = github.NewClient(httpClient)
+	} else if _, present := os.LookupEnv("GITHUB_TOKEN"); present {
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+		)
+		tc := oauth2.NewClient(ctx, ts)
 
-	//if client != nil {
-	//	//primarily used for testing.
-	//	g.Client = github.NewClient(client)
-	//} else {
-	//	ctx := context.Background()
-	//	ts := oauth2.StaticTokenSource(
-	//		&oauth2.Token{AccessToken: g.Config.GetString("scm_github_access_token")},
-	//	)
-	//	tc := oauth2.NewClient(ctx, ts)
-	//
-	//	//TODO: autopaginate turned on.
-	//	g.Client = github.NewClient(tc)
-	//}
-	//
-	//if g.Config.IsSet("scm_github_api_endpoint") {
-	//
-	//	apiUrl, aerr := url.Parse(g.Config.GetString("scm_github_api_endpoint"))
-	//	if aerr != nil {
-	//		return aerr
-	//	}
-	//	g.Client.BaseURL = apiUrl
-	//}
+		g.Client = github.NewClient(tc)
+
+		if _, isAction := os.LookupEnv("GITHUB_ACTION"); isAction {
+			//running as a github action.
+			g.Config.Set(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN_TYPE, "app")
+		}
+	} else if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN) {
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: g.Config.GetString("scm_github_access_token")},
+		)
+		tc := oauth2.NewClient(ctx, ts)
+
+		g.Client = github.NewClient(tc)
+	} else {
+		//no access token present
+		g.Client = nil
+	}
+
+	if g.Client != nil && g.Config.IsSet(config.PACKAGR_SCM_GITHUB_API_ENDPOINT) {
+
+		apiUrl, aerr := url.Parse(g.Config.GetString("scm_github_api_endpoint"))
+		if aerr != nil {
+			return aerr
+		}
+		g.Client.BaseURL = apiUrl
+	}
 
 	return nil
 }
 
 func (g *scmGithub) RetrievePayload() (*Payload, error) {
-	eventType := utils.GetEnv("GITHUB_EVENT_NAME", "push")
-	eventPayloadPath, present := os.LookupEnv("GITHUB_EVENT_PATH")
-	if !present {
-		return nil, errors.ScmPayloadFormatError("Event Payload not present")
-	}
 
-	//open & parse JSON File
-	jsonBytes, err := ioutil.ReadFile(eventPayloadPath)
-	if err != nil {
-		return nil, errors.ScmFilesystemError("Event Payload Path does not exist")
-	}
+	if _, isAction := os.LookupEnv("GITHUB_ACTION"); !isAction {
+		// this is not a github action.
+		// check if the user has provided information for us to determine if this is a push or a pull request
 
-	if eventType == "push" {
-		var pushEvent github.PushEvent
-		err := json.Unmarshal(jsonBytes, &pushEvent)
-		if err != nil {
-			return nil, errors.ScmPayloadFormatError(err.Error())
+		if !g.Config.IsSet(config.PACKAGR_SCM_PULL_REQUEST) {
+			log.Print("This is not a pull request.")
+			g.PipelineData.IsPullRequest = false
+
+			//check the local git repo for relevant info
+			remoteUrl, err := git.GitGetRemote(g.PipelineData.GitLocalPath, "origin")
+			if err != nil {
+				return nil, err
+			}
+
+			commit, err := git.GitGetHeadCommit(g.PipelineData.GitLocalPath)
+			if err != nil {
+				return nil, err
+			}
+
+			branch, err := git.GitGetBranch(g.PipelineData.GitLocalPath)
+			if err != nil {
+				return nil, err
+			}
+
+			if !g.Config.IsSet(config.PACKAGR_SCM_REPO_FULL_NAME) {
+				return nil, errors.ScmPayloadFormatError("repo full name (owner/repo_name) must be provided.")
+			}
+
+			fullName := g.Config.GetString("scm_repo_full_name")
+			nameParts := strings.Split(fullName, "/")
+
+			return &Payload{
+				Head: &pipeline.ScmCommitInfo{
+					Sha: commit,
+					Ref: branch,
+					Repo: &pipeline.ScmRepoInfo{
+						CloneUrl: remoteUrl,
+						Name:     nameParts[1],
+						FullName: fullName,
+					}},
+			}, nil
+			//make this as similar to a pull request as possible
+		} else {
+			g.PipelineData.IsPullRequest = true
+			ctx := context.Background()
+			parts := strings.Split(g.Config.GetString(config.PACKAGR_SCM_REPO_FULL_NAME), "/")
+			pr, _, err := g.Client.PullRequests.Get(ctx, parts[0], parts[1], g.Config.GetInt(config.PACKAGR_SCM_PULL_REQUEST))
+
+			if err != nil {
+				return nil, errors.ScmAuthenticationFailed(fmt.Sprintf("Could not retrieve pull request from Github: %s", err))
+			}
+
+			//validate pullrequest
+			if pr.GetState() != "open" {
+				return nil, errors.ScmPayloadUnsupported("Pull request has an invalid action")
+			}
+			if pr.Base.Repo.GetDefaultBranch() != pr.Base.GetRef() {
+				return nil, errors.ScmPayloadUnsupported(fmt.Sprintf("Pull request is not being created against the default branch of this repository (%s vs %s)", pr.Base.Repo.GetDefaultBranch(), pr.Base.GetRef()))
+			}
+			// check the payload push user.
+
+			//TODO: figure out how to do optional authenication. possible options, Source USER, token based auth, no auth when used with capsulecd.com.
+			// unless @source_client.collaborator?(payload['base']['repo']['full_name'], payload['user']['login'])
+			//
+			//   @source_client.add_comment(payload['base']['repo']['full_name'], payload['number'], CapsuleCD::BotUtils.pull_request_comment)
+			//   fail CapsuleCD::Error::SourceUnauthorizedUser, 'Pull request was opened by an unauthorized user'
+			// end
+
+			return githubHelper.PayloadFromGithubPullRequest(*pr), nil
 		}
-
-		g.PipelineData.IsPullRequest = false
-
-		return &Payload{
-			Head: &pipeline.ScmCommitInfo{
-				Sha: pushEvent.GetAfter(),
-				Ref: pushEvent.GetRef(),
-				Repo: &pipeline.ScmRepoInfo{
-					CloneUrl: pushEvent.GetRepo().GetCloneURL(),
-					Name:     pushEvent.GetRepo().GetName(),
-					FullName: pushEvent.GetRepo().GetFullName(),
-				}},
-		}, nil
-		//make this as similar to a pull request as possible
-	} else if eventType == "pull_request" {
-
-		//parse Pull Request event payload
-		var pullRequestEvent github.PullRequestEvent
-		err := json.Unmarshal(jsonBytes, &pullRequestEvent)
-		if err != nil {
-			return nil, errors.ScmPayloadFormatError(err.Error())
-		}
-
-		g.PipelineData.IsPullRequest = true
-
-		return &Payload{
-			Title:             pullRequestEvent.GetPullRequest().GetTitle(),
-			PullRequestNumber: strconv.Itoa(pullRequestEvent.GetPullRequest().GetNumber()),
-			Head: &pipeline.ScmCommitInfo{
-				Sha: pullRequestEvent.GetPullRequest().GetHead().GetSHA(),
-				Ref: pullRequestEvent.GetPullRequest().GetHead().GetRef(),
-				Repo: &pipeline.ScmRepoInfo{
-					CloneUrl: pullRequestEvent.GetPullRequest().GetHead().GetRepo().GetCloneURL(),
-					Name:     pullRequestEvent.GetPullRequest().GetHead().GetRepo().GetName(),
-					FullName: pullRequestEvent.GetPullRequest().GetHead().GetRepo().GetFullName(),
-				},
-			},
-			Base: &pipeline.ScmCommitInfo{
-				Sha: pullRequestEvent.GetPullRequest().GetBase().GetSHA(),
-				Ref: pullRequestEvent.GetPullRequest().GetBase().GetRef(),
-				Repo: &pipeline.ScmRepoInfo{
-					CloneUrl: pullRequestEvent.GetPullRequest().GetBase().GetRepo().GetCloneURL(),
-					Name:     pullRequestEvent.GetPullRequest().GetBase().GetRepo().GetName(),
-					FullName: pullRequestEvent.GetPullRequest().GetBase().GetRepo().GetFullName(),
-				},
-			},
-		}, nil
-	} else if eventType == "workflow_dispatch" {
-		//parse Workflow Dispatch (manual) event payload
-		var wfDispatchEvent WorkflowDispatchEvent
-		err := json.Unmarshal(jsonBytes, &wfDispatchEvent)
-		if err != nil {
-			return nil, errors.ScmPayloadFormatError(err.Error())
-		}
-
-		g.PipelineData.IsPullRequest = false
-		return &Payload{
-			Head: &pipeline.ScmCommitInfo{
-				//Sha: wfDispatchEvent.GetAfter(),
-				Ref: *wfDispatchEvent.Ref,
-				Repo: &pipeline.ScmRepoInfo{
-					CloneUrl: wfDispatchEvent.Repo.GetCloneURL(),
-					Name:     wfDispatchEvent.Repo.GetName(),
-					FullName: wfDispatchEvent.Repo.GetFullName(),
-				}},
-		}, nil
 
 	} else {
-		return nil, errors.ScmPayloadUnsupported("Unknown Event Type. Exiting.")
+		//this is a github action, retrieve event data
+		eventType := utils.GetEnv("GITHUB_EVENT_NAME", "push")
+		eventPayloadPath, present := os.LookupEnv("GITHUB_EVENT_PATH")
+		if !present {
+			return nil, errors.ScmPayloadFormatError("Event Payload not present")
+		}
+
+		//open & parse JSON File
+		jsonBytes, err := ioutil.ReadFile(eventPayloadPath)
+		if err != nil {
+			return nil, errors.ScmFilesystemError("Event Payload Path does not exist")
+		}
+
+		if eventType == "push" {
+			var pushEvent github.PushEvent
+			err := json.Unmarshal(jsonBytes, &pushEvent)
+			if err != nil {
+				return nil, errors.ScmPayloadFormatError(err.Error())
+			}
+
+			g.PipelineData.IsPullRequest = false
+			return githubHelper.PayloadFromGithubPushEvent(pushEvent), nil
+			//make this as similar to a pull request as possible
+		} else if eventType == "pull_request" {
+
+			//parse Pull Request event payload
+			var pullRequestEvent github.PullRequestEvent
+			err := json.Unmarshal(jsonBytes, &pullRequestEvent)
+			if err != nil {
+				return nil, errors.ScmPayloadFormatError(err.Error())
+			}
+
+			g.PipelineData.IsPullRequest = true
+			return githubHelper.PayloadFromGithubPullRequest(*pullRequestEvent.GetPullRequest()), nil
+		} else if eventType == "workflow_dispatch" {
+			//parse Workflow Dispatch (manual) event payload
+			var wfDispatchEvent githubHelper.WorkflowDispatchEvent
+			err := json.Unmarshal(jsonBytes, &wfDispatchEvent)
+			if err != nil {
+				return nil, errors.ScmPayloadFormatError(err.Error())
+			}
+
+			g.PipelineData.IsPullRequest = false
+			return githubHelper.PayloadFromGithubWorkflowDispatchEvent(wfDispatchEvent), nil
+
+		} else {
+			return nil, errors.ScmPayloadUnsupported("Unknown Event Type. Exiting.")
+		}
 	}
 }
+
+func (g *scmGithub) Publish() error {
+	//the repo has already been pushed at this point, now we need to create a Github release.
+
+	if g.Client == nil {
+		log.Println("Skipping scm publish, no client credentials found")
+		return nil
+	}
+
+	// calculate the release sha
+	releaseSha := utils.LeftPad2Len(g.PipelineData.ReleaseCommit, "0", 40)
+
+	//get the release changelog
+	// logic is complicated.
+	// If this is a push we can only do a tag-tag Changelog
+	// If this is a pull request we can do either
+	// if disable_nearest_tag_changelog is true, we must attempt
+	var releaseBody string = ""
+	if g.PipelineData.GitNearestTag != nil && !g.Config.GetBool(config.PACKAGR_SCM_DISABLE_NEAREST_TAG_CHANGELOG) {
+		releaseBody, _ = git.GitGenerateChangelog(
+			g.PipelineData.GitLocalPath,
+			g.PipelineData.GitNearestTag.TagShortName,
+			g.PipelineData.GitLocalBranch,
+		)
+	}
+	//fallback to using diff if pullrequest.
+	if g.PipelineData.IsPullRequest && releaseBody == "" {
+		releaseBody, _ = git.GitGenerateChangelog(
+			g.PipelineData.GitLocalPath,
+			g.PipelineData.GitBaseInfo.Sha,
+			g.PipelineData.GitHeadInfo.Sha,
+		)
+	}
+
+	//create release.
+	ctx := context.Background()
+	parts := strings.Split(g.Config.GetString(config.PACKAGR_SCM_REPO_FULL_NAME), "/")
+	version := fmt.Sprintf("v%s", g.PipelineData.ReleaseVersion)
+
+	log.Printf("Creating new release for `%s/%s` with version: `%s` on commit: `%s`. Commit message: `%s`", parts[0], parts[1], version, releaseSha, releaseBody)
+
+	releaseData, _, rerr := g.Client.Repositories.CreateRelease(
+		ctx,
+		parts[0],
+		parts[1],
+		&github.RepositoryRelease{
+			TargetCommitish: &releaseSha,
+			Body:            &releaseBody,
+			TagName:         &version,
+			Name:            &version,
+		},
+	)
+	if rerr != nil {
+		return rerr
+	}
+
+	if perr := g.PublishAssets(releaseData.GetID()); perr != nil {
+		log.Print("An error occured while publishing assets:")
+		log.Print(perr)
+		log.Print("Continuing...")
+	}
+
+	return nil
+}
+
+func (g *scmGithub) PublishAssets(releaseData interface{}) error {
+	//releaseData should be an ID (int)
+	releaseId, ok := releaseData.(int64)
+	if !ok {
+		return fmt.Errorf("Invalid releaseID, cannot upload assets")
+	}
+
+	ctx := context.Background()
+	parts := strings.Split(g.Config.GetString(config.PACKAGR_SCM_REPO_FULL_NAME), "/")
+
+	for _, assetData := range g.PipelineData.ReleaseAssets {
+		// handle templated destination artifact names
+		artifactNamePopulated, aerr := utils.PopulateTemplate(assetData.ArtifactName, g.PipelineData)
+		if aerr != nil {
+			return aerr
+		}
+
+		localPathPopulated, lerr := utils.PopulateTemplate(assetData.LocalPath, g.PipelineData)
+		if lerr != nil {
+			return lerr
+		}
+
+		g.publishGithubAsset(
+			g.Client,
+			ctx,
+			parts[0],
+			parts[1],
+			artifactNamePopulated,
+			path.Join(g.PipelineData.GitLocalPath, localPathPopulated),
+			releaseId,
+			5)
+	}
+	return nil
+}
+
+func (g *scmGithub) Cleanup() error {
+
+	if !g.Config.GetBool(config.PACKAGR_SCM_ENABLE_BRANCH_CLEANUP) { //Default is false, so this will just return without doing anything.
+		// - exit if "scm_enable_branch_cleanup" is not true
+		return errors.ScmCleanupFailed("scm_enable_branch_cleanup is false. Skipping cleanup")
+	} else if !g.PipelineData.IsPullRequest {
+		return errors.ScmCleanupFailed("scm cleanup unnecessary for push's. Skipping cleanup")
+	} else if g.PipelineData.GitHeadInfo.Repo.FullName != g.PipelineData.GitBaseInfo.Repo.FullName {
+		// exit if the HEAD PR branch is not in the same organization and repository as the BASE
+		return errors.ScmCleanupFailed("HEAD PR branch is not in the same organization & repo as the BASE. Skipping cleanup")
+	} else if g.Client == nil {
+		return nil
+	}
+
+	ctx := context.Background()
+	parts := strings.Split(g.PipelineData.GitBaseInfo.Repo.FullName, "/")
+
+	repoData, _, err := g.Client.Repositories.Get(ctx, parts[0], parts[1])
+	if err != nil {
+		return err
+	}
+
+	if g.PipelineData.GitHeadInfo.Ref == repoData.GetDefaultBranch() || g.PipelineData.GitHeadInfo.Ref == "master" {
+		//exit if the HEAD branch is the repo default branch
+		//exit if the HEAD branch is master
+		return errors.ScmCleanupFailed("HEAD PR branch is default repo branch, or master. Skipping cleanup")
+	}
+
+	_, drerr := g.Client.Git.DeleteRef(ctx, parts[0], parts[1], fmt.Sprintf("heads/%s", g.PipelineData.GitHeadInfo.Ref))
+	if drerr != nil {
+		return drerr
+	}
+
+	return nil
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Github Specific Functionality (need to figure out a proper location for this code).
+///////////////////////////////////////////////////////////////////////////
 
 // see https://github.com/actions/toolkit/blob/main/docs/commands.md
 func (g *scmGithub) SetEnvironmentalVariable(name string, value string) error {
@@ -201,4 +361,28 @@ func (g *scmGithub) SetOutput(name string, value string) error {
 func (g *scmGithub) MaskSecret(secret string) error {
 	fmt.Printf("\n::add-mask::%s\n", secret)
 	return nil
+}
+
+//private
+
+func (g *scmGithub) publishGithubAsset(client *github.Client, ctx context.Context, repoOwner string, repoName string, assetName, filePath string, releaseID int64, retries int) error {
+
+	log.Printf("Attempt (%d) to upload release asset %s from %s", retries, assetName, filePath)
+	f, err := os.Open(filePath)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	_, _, err = client.Repositories.UploadReleaseAsset(ctx, repoOwner, repoName, releaseID, &github.UploadOptions{
+		Name: assetName,
+	}, f)
+
+	if err != nil && retries > 0 {
+		fmt.Println("artifact upload errored out, retrying in one second. Err:", err)
+		time.Sleep(time.Second)
+		err = g.publishGithubAsset(client, ctx, repoOwner, repoName, assetName, filePath, releaseID, retries-1)
+	}
+
+	return err
 }
