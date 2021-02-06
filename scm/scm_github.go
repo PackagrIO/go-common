@@ -201,11 +201,32 @@ func (g *scmGithub) RetrievePayload() (*Payload, error) {
 }
 
 func (g *scmGithub) Publish() error {
-	//the repo has already been pushed at this point, now we need to create a Github release.
 
+	perr := git.GitPush(g.PipelineData.GitLocalPath, g.PipelineData.GitLocalBranch, g.PipelineData.GitBaseInfo.Ref, fmt.Sprintf("v%s", g.PipelineData.ReleaseVersion))	if perr != nil {
+		return perr
+	}
+	//sleep because github needs time to process the new tag.
+	time.Sleep(5 * time.Second)
+
+	// calculate the release sha
+	releaseCommit, err := git.GitGetHeadCommit(g.PipelineData.GitLocalPath)
+	if err != nil {
+		return err
+	}
+	p.Data.ReleaseCommit = releaseCommit
+
+
+
+	//the repo has already been pushed at this point, now we need to create a Github release.
 	if g.Client == nil {
 		log.Println("Skipping scm publish, no client credentials found")
 		return nil
+	}
+
+	// try to find the nearest tag for this repo
+	err := g.populateNearestTag()
+	if err != nil {
+		//ignore errors, we will just have an empty changelog.
 	}
 
 	// calculate the release sha
@@ -364,6 +385,22 @@ func (g *scmGithub) MaskSecret(secret string) error {
 }
 
 //private
+
+// the current commit should be a tag, we need to find the previous tag
+func (g *scmGithub) populateNearestTag() error {
+	//retrieve and store the nearestTag to this commit.
+	nearestTag, err := git.GitFindNearestTagName(g.PipelineData.GitLocalPath)
+	if err != nil {
+		return nil // we dont care about failures finding the nearest tag, we'll just have an empty changelog.
+	}
+
+	tagDetails, err := git.GitGetTagDetails(g.PipelineData.GitLocalPath, nearestTag)
+	if err != nil {
+		return nil // we dont care about failures finding the nearest tag, we'll just have an empty changelog.
+	}
+	g.PipelineData.GitNearestTag = tagDetails
+	return nil
+}
 
 func (g *scmGithub) publishGithubAsset(client *github.Client, ctx context.Context, repoOwner string, repoName string, assetName, filePath string, releaseID int64, retries int) error {
 

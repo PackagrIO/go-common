@@ -43,6 +43,7 @@ func (s *scmGeneric) Init(pipelineData *pipeline.Data, myConfig config.BaseInter
 	return nil
 }
 
+// Generic reps
 func (s *scmGeneric) RetrievePayload() (*Payload, error) {
 	return nil, nil
 }
