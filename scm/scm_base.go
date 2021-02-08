@@ -86,7 +86,16 @@ func (s *scmBase) Publish() error {
 	//create a randomly named local branch based on the head commit.
 	_, err := git.GitCreateBranchFromHead(s.PipelineData.GitLocalPath, s.PipelineData.GitLocalBranch)
 
-	perr := git.GitPush(s.PipelineData.GitLocalPath, s.PipelineData.GitLocalBranch, s.PipelineData.GitBaseInfo.Ref, fmt.Sprintf("v%s", s.PipelineData.ReleaseVersion))
+	var destBranchName string
+	if s.PipelineData.IsPullRequest {
+		//the branch data is stored in the  "base"
+		destBranchName = s.PipelineData.GitBaseInfo.Ref
+	} else {
+		//the branch info is stored in the "head"
+		destBranchName = s.PipelineData.GitHeadInfo.Ref
+	}
+
+	perr := git.GitPush(s.PipelineData.GitLocalPath, s.PipelineData.GitLocalBranch, destBranchName, fmt.Sprintf("v%s", s.PipelineData.ReleaseVersion))
 	if perr != nil {
 		return perr
 	}
