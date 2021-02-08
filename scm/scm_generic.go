@@ -6,7 +6,9 @@ import (
 	"net/http"
 )
 
+//Generic SCM makes no assumptions about a cloud SCM (like Bitbucket, Github, Gitlab). Instead it'll just use native git commands
 type scmGeneric struct {
+	scmBase
 	PipelineData *pipeline.Data
 }
 
@@ -43,14 +45,15 @@ func (s *scmGeneric) Init(pipelineData *pipeline.Data, myConfig config.BaseInter
 	return nil
 }
 
-// Generic reps
-func (s *scmGeneric) RetrievePayload() (*Payload, error) {
-	return nil, nil
-}
+// comes from scmBase
+//func (s *scmGeneric) RetrievePayload() (*Payload, error) {
+//	return s.scmBase.RetrievePayload()
+//}
 
-func (s *scmGeneric) Publish() error {
-	return nil
-}
+// use scmBase
+//func (s *scmGeneric) Publish() error {
+//	return s.scmBase.Publish()
+//}
 
 func (s *scmGeneric) PublishAssets(releaseData interface{}) error {
 	return nil

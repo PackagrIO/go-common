@@ -23,9 +23,12 @@ import (
 )
 
 type scmGithub struct {
+	scmBase
 	PipelineData *pipeline.Data
 	Client       *github.Client
 	Config       config.BaseInterface
+
+	isGithubActionEnv bool
 }
 
 func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterface, httpClient *http.Client) error {
@@ -50,6 +53,7 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 		if _, isAction := os.LookupEnv("GITHUB_ACTION"); isAction {
 			//running as a github action.
 			g.Config.Set(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN_TYPE, "app")
+			g.isGithubActionEnv = true
 		}
 	} else if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN) {
 		ts := oauth2.StaticTokenSource(
@@ -60,10 +64,10 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 		g.Client = github.NewClient(tc)
 	} else {
 		//no access token present
-		g.Client = nil
+		return fmt.Errorf("github SCM requires an access token")
 	}
 
-	if g.Client != nil && g.Config.IsSet(config.PACKAGR_SCM_GITHUB_API_ENDPOINT) {
+	if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_API_ENDPOINT) {
 
 		apiUrl, aerr := url.Parse(g.Config.GetString("scm_github_api_endpoint"))
 		if aerr != nil {
@@ -77,49 +81,20 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 
 func (g *scmGithub) RetrievePayload() (*Payload, error) {
 
-	if _, isAction := os.LookupEnv("GITHUB_ACTION"); !isAction {
+	if !g.isGithubActionEnv {
 		// this is not a github action.
 		// check if the user has provided information for us to determine if this is a push or a pull request
 
 		if !g.Config.IsSet(config.PACKAGR_SCM_PULL_REQUEST) {
 			log.Print("This is not a pull request.")
-			g.PipelineData.IsPullRequest = false
 
-			//check the local git repo for relevant info
-			remoteUrl, err := git.GitGetRemote(g.PipelineData.GitLocalPath, "origin")
-			if err != nil {
-				return nil, err
-			}
-
-			commit, err := git.GitGetHeadCommit(g.PipelineData.GitLocalPath)
-			if err != nil {
-				return nil, err
-			}
-
-			branch, err := git.GitGetBranch(g.PipelineData.GitLocalPath)
-			if err != nil {
-				return nil, err
-			}
-
-			if !g.Config.IsSet(config.PACKAGR_SCM_REPO_FULL_NAME) {
-				return nil, errors.ScmPayloadFormatError("repo full name (owner/repo_name) must be provided.")
-			}
-
-			fullName := g.Config.GetString("scm_repo_full_name")
-			nameParts := strings.Split(fullName, "/")
-
-			return &Payload{
-				Head: &pipeline.ScmCommitInfo{
-					Sha: commit,
-					Ref: branch,
-					Repo: &pipeline.ScmRepoInfo{
-						CloneUrl: remoteUrl,
-						Name:     nameParts[1],
-						FullName: fullName,
-					}},
-			}, nil
+			return g.scmBase.RetrievePayload()
 			//make this as similar to a pull request as possible
 		} else {
+			log.Print("This is a pull request")
+			if !g.Config.IsSet(config.PACKAGR_SCM_REPO_FULL_NAME) {
+				return nil, errors.ScmPayloadFormatError("repository full name must be provided for Github pull request processing")
+			}
 			g.PipelineData.IsPullRequest = true
 			ctx := context.Background()
 			parts := strings.Split(g.Config.GetString(config.PACKAGR_SCM_REPO_FULL_NAME), "/")
@@ -202,20 +177,14 @@ func (g *scmGithub) RetrievePayload() (*Payload, error) {
 
 func (g *scmGithub) Publish() error {
 
-	perr := git.GitPush(g.PipelineData.GitLocalPath, g.PipelineData.GitLocalBranch, g.PipelineData.GitBaseInfo.Ref, fmt.Sprintf("v%s", g.PipelineData.ReleaseVersion))	if perr != nil {
-		return perr
-	}
-	//sleep because github needs time to process the new tag.
-	time.Sleep(5 * time.Second)
-
-	// calculate the release sha
-	releaseCommit, err := git.GitGetHeadCommit(g.PipelineData.GitLocalPath)
+	//do a basic publish (git push).
+	err := g.scmBase.Publish()
 	if err != nil {
 		return err
 	}
-	p.Data.ReleaseCommit = releaseCommit
 
-
+	//sleep because github needs time to process the new tag.
+	time.Sleep(5 * time.Second)
 
 	//the repo has already been pushed at this point, now we need to create a Github release.
 	if g.Client == nil {
@@ -224,7 +193,7 @@ func (g *scmGithub) Publish() error {
 	}
 
 	// try to find the nearest tag for this repo
-	err := g.populateNearestTag()
+	err = g.populateNearestTag()
 	if err != nil {
 		//ignore errors, we will just have an empty changelog.
 	}
