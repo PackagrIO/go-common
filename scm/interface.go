@@ -3,6 +3,7 @@ package scm
 import (
 	"github.com/packagrio/go-common/config"
 	"github.com/packagrio/go-common/pipeline"
+	"github.com/packagrio/go-common/scm/models"
 	"net/http"
 )
 
@@ -21,7 +22,7 @@ type Interface interface {
 	//   - if it's a pull request the scm must retrieve the pull request payload and return it
 	//   - if its a push, the scm must retrieve the push payload and return it
 	// MUST set pipelineData.IsPullRequest
-	RetrievePayload() (*Payload, error)
+	RetrievePayload() (*models.Payload, error)
 
 	//Populate the pipeline data using data retrieved from Git repo or APIs
 	// if PUSH
@@ -34,7 +35,7 @@ type Interface interface {
 	// MUST set pipelineData.GitBaseInfo
 	// MUST set pipelineData.GitHeadInfo
 	// SHOULD set pipelineData.NearestTagDetails
-	PopulatePipelineData(payload *Payload) error
+	PopulatePipelineData(payload *models.Payload) error
 
 	// The local & remote repository should now contain code that has been the merged, tested and version bumped.
 	// this step should also do any scm specific releases (github release, asset uploading, etc)

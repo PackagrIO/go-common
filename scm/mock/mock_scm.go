@@ -7,7 +7,7 @@ package mock_scm
 import (
 	gomock "github.com/golang/mock/gomock"
 	pipeline "github.com/packagrio/go-common/pipeline"
-	scm "github.com/packagrio/go-common/scm"
+	"github.com/packagrio/go-common/scm/models"
 	reflect "reflect"
 )
 
@@ -49,10 +49,10 @@ func (mr *MockInterfaceMockRecorder) Init(pipelineData interface{}) *gomock.Call
 }
 
 // RetrievePayload mocks base method
-func (m *MockInterface) RetrievePayload() (*scm.Payload, error) {
+func (m *MockInterface) RetrievePayload() (*models.Payload, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RetrievePayload")
-	ret0, _ := ret[0].(*scm.Payload)
+	ret0, _ := ret[0].(*models.Payload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

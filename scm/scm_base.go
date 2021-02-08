@@ -5,6 +5,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/packagrio/go-common/config"
 	"github.com/packagrio/go-common/pipeline"
+	"github.com/packagrio/go-common/scm/models"
 	"github.com/packagrio/go-common/utils/git"
 	"net/http"
 	"os"
@@ -31,7 +32,7 @@ func (s *scmBase) Init(pipelineData *pipeline.Data, myConfig config.BaseInterfac
 
 //We cant make any assumptions about the SCM or the environment. (No Pull requests or SCM env vars). So lets use native git methods to get
 // the current repo status.
-func (g *scmBase) RetrievePayload() (*Payload, error) {
+func (g *scmBase) RetrievePayload() (*models.Payload, error) {
 
 	g.PipelineData.IsPullRequest = false
 
@@ -51,7 +52,7 @@ func (g *scmBase) RetrievePayload() (*Payload, error) {
 		return nil, err
 	}
 
-	return &Payload{
+	return &models.Payload{
 		Head: &pipeline.ScmCommitInfo{
 			Sha: commit,
 			Ref: branch,
@@ -61,7 +62,7 @@ func (g *scmBase) RetrievePayload() (*Payload, error) {
 	}, nil
 }
 
-func (g *scmBase) PopulatePipelineData(payload *Payload) error {
+func (g *scmBase) PopulatePipelineData(payload *models.Payload) error {
 	//set the processed head info
 	g.PipelineData.GitHeadInfo = payload.Head
 	if err := g.PipelineData.GitHeadInfo.Validate(); err != nil {

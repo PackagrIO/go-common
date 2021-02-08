@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/google/go-github/v32/github"
 	"github.com/packagrio/go-common/pipeline"
-	"github.com/packagrio/go-common/scm"
+	"github.com/packagrio/go-common/scm/models"
 )
 
 // TAKEN from: https://github.com/google/go-github/blob/master/github/event_types.go
@@ -25,8 +25,8 @@ type WorkflowDispatchEvent struct {
 	Sender *github.User         `json:"sender,omitempty"`
 }
 
-func PayloadFromGithubWorkflowDispatchEvent(wfDispatchEvent WorkflowDispatchEvent) *scm.Payload {
-	return &scm.Payload{
+func PayloadFromGithubWorkflowDispatchEvent(wfDispatchEvent WorkflowDispatchEvent) *models.Payload {
+	return &models.Payload{
 		Head: &pipeline.ScmCommitInfo{
 			//Sha: wfDispatchEvent.GetAfter(),
 			Ref: *wfDispatchEvent.Ref,

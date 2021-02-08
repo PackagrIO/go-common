@@ -10,6 +10,7 @@ import (
 	"github.com/packagrio/go-common/errors"
 	"github.com/packagrio/go-common/pipeline"
 	githubHelper "github.com/packagrio/go-common/scm/github"
+	"github.com/packagrio/go-common/scm/models"
 	"github.com/packagrio/go-common/utils/git"
 	"golang.org/x/oauth2"
 	"io/ioutil"
@@ -82,7 +83,7 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 	return nil
 }
 
-func (g *scmGithub) RetrievePayload() (*Payload, error) {
+func (g *scmGithub) RetrievePayload() (*models.Payload, error) {
 
 	if !g.isGithubActionEnv {
 		// this is not a github action.

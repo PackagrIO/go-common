@@ -1,4 +1,4 @@
-package scm
+package models
 
 import "github.com/packagrio/go-common/pipeline"
 

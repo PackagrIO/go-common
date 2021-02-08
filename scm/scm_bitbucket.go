@@ -3,6 +3,7 @@ package scm
 import (
 	"github.com/packagrio/go-common/config"
 	"github.com/packagrio/go-common/pipeline"
+	"github.com/packagrio/go-common/scm/models"
 	"net/http"
 )
 
@@ -17,7 +18,7 @@ func (b *scmBitbucket) Init(pipelineData *pipeline.Data, myConfig config.BaseInt
 	return b.scmBase.Init(pipelineData, myConfig, httpClient)
 }
 
-func (b *scmBitbucket) RetrievePayload() (*Payload, error) {
+func (b *scmBitbucket) RetrievePayload() (*models.Payload, error) {
 	return nil, nil
 }
 
