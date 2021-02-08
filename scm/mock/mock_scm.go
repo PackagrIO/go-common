@@ -6,8 +6,10 @@ package mock_scm
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	config "github.com/packagrio/go-common/config"
 	pipeline "github.com/packagrio/go-common/pipeline"
-	"github.com/packagrio/go-common/scm/models"
+	models "github.com/packagrio/go-common/scm/models"
+	http "net/http"
 	reflect "reflect"
 )
 
@@ -35,17 +37,17 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // Init mocks base method
-func (m *MockInterface) Init(pipelineData *pipeline.Data) error {
+func (m *MockInterface) Init(pipelineData *pipeline.Data, config config.BaseInterface, client *http.Client) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", pipelineData)
+	ret := m.ctrl.Call(m, "Init", pipelineData, config, client)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init
-func (mr *MockInterfaceMockRecorder) Init(pipelineData interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Init(pipelineData, config, client interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockInterface)(nil).Init), pipelineData)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockInterface)(nil).Init), pipelineData, config, client)
 }
 
 // RetrievePayload mocks base method
@@ -61,6 +63,62 @@ func (m *MockInterface) RetrievePayload() (*models.Payload, error) {
 func (mr *MockInterfaceMockRecorder) RetrievePayload() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetrievePayload", reflect.TypeOf((*MockInterface)(nil).RetrievePayload))
+}
+
+// PopulatePipelineData mocks base method
+func (m *MockInterface) PopulatePipelineData(payload *models.Payload) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PopulatePipelineData", payload)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PopulatePipelineData indicates an expected call of PopulatePipelineData
+func (mr *MockInterfaceMockRecorder) PopulatePipelineData(payload interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulatePipelineData", reflect.TypeOf((*MockInterface)(nil).PopulatePipelineData), payload)
+}
+
+// Publish mocks base method
+func (m *MockInterface) Publish() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Publish")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Publish indicates an expected call of Publish
+func (mr *MockInterfaceMockRecorder) Publish() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockInterface)(nil).Publish))
+}
+
+// PublishAssets mocks base method
+func (m *MockInterface) PublishAssets(releaseData interface{}) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishAssets", releaseData)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishAssets indicates an expected call of PublishAssets
+func (mr *MockInterfaceMockRecorder) PublishAssets(releaseData interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishAssets", reflect.TypeOf((*MockInterface)(nil).PublishAssets), releaseData)
+}
+
+// Cleanup mocks base method
+func (m *MockInterface) Cleanup() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Cleanup")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Cleanup indicates an expected call of Cleanup
+func (mr *MockInterfaceMockRecorder) Cleanup() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cleanup", reflect.TypeOf((*MockInterface)(nil).Cleanup))
 }
 
 // SetEnvironmentalVariable mocks base method
