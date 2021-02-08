@@ -9,40 +9,13 @@ import (
 //Generic SCM makes no assumptions about a cloud SCM (like Bitbucket, Github, Gitlab). Instead it'll just use native git commands
 type scmGeneric struct {
 	scmBase
-	PipelineData *pipeline.Data
 }
 
 // configure method will generate an authenticated client that can be used to comunicate with Github
 // MUST set @git_parent_path
 // MUST set @client field
 func (s *scmGeneric) Init(pipelineData *pipeline.Data, myConfig config.BaseInterface, httpClient *http.Client) error {
-	s.PipelineData = pipelineData
-
-	//if !s.Config.IsSet("scm_bitbucket_username") {
-	//	return errors.ScmAuthenticationFailed("Missing bitbucket username")
-	//}
-	//if !s.Config.IsSet("scm_bitbucket_password") && !s.Config.IsSet("scm_bitbucket_access_token") {
-	//	return errors.ScmAuthenticationFailed("Bitbucket app password or access token is required")
-	//}
-	//if s.Config.IsSet("scm_git_parent_path") {
-	//	s.PipelineData.GitParentPath = s.Config.GetString("scm_git_parent_path")
-	//	os.MkdirAll(s.PipelineData.GitParentPath, os.ModePerm)
-	//} else {
-	//	dirPath, _ := ioutil.TempDir("", "")
-	//	s.PipelineData.GitParentPath = dirPath
-	//}
-	//
-	//if s.Config.IsSet("scm_bitbucket_password") {
-	//	s.Client = bitbucket.NewBasicAuth(s.Config.GetString("scm_bitbucket_username"), s.Config.GetString("scm_bitbucket_password"))
-	//} else {
-	//	s.Client = bitbucket.NewOAuthbearerToken(s.Config.GetString("scm_bitbucket_access_token"))
-	//}
-	//if client != nil {
-	//	//primarily used for testing.
-	//	s.Client.HttpClient = client
-	//}
-
-	return nil
+	return s.scmBase.Init(pipelineData, myConfig, httpClient)
 }
 
 // comes from scmBase

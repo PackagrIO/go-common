@@ -24,15 +24,18 @@ import (
 
 type scmGithub struct {
 	scmBase
-	PipelineData *pipeline.Data
-	Client       *github.Client
-	Config       config.BaseInterface
+	Client *github.Client
+	Config config.BaseInterface
 
 	isGithubActionEnv bool
 }
 
 func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterface, httpClient *http.Client) error {
-	g.PipelineData = pipelineData
+	err := g.scmBase.Init(pipelineData, myConfig, httpClient)
+	if err != nil {
+		return err
+	}
+
 	g.Config = myConfig
 	g.Config.SetDefault(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN_TYPE, "user")
 
@@ -174,6 +177,36 @@ func (g *scmGithub) RetrievePayload() (*Payload, error) {
 		}
 	}
 }
+
+//
+//func (g *scmGithub) PopulatePipelineData(payload *Payload) error {
+//	err := g.scmBase.PopulatePipelineData(payload)
+//	if err != nil {
+//		return err
+//	}
+//	//this is a Github repo, so we can assume that the Clone URL is a https url
+//
+//	//var gitRemoteUsername string
+//	//var gitRemotePassword string
+//	//
+//	//if g.Config.GetString("scm_github_access_token_type") == "app" {
+//	//	// see https://developer.github.com/apps/building-github-apps/authenticating-with-github-apps/
+//	//	gitRemoteUsername = "x-access-token"
+//	//	gitRemotePassword = g.Config.GetString("scm_github_access_token")
+//	//} else {
+//	//	gitRemoteUsername = g.Config.GetString("scm_github_access_token")
+//	//	gitRemotePassword = ""
+//	//}
+//	//
+//	//authRemote, aerr := authGitRemote(g.PipelineData.GitBaseInfo.Repo.CloneUrl, gitRemoteUsername, gitRemotePassword)
+//	//if aerr != nil {
+//	//	return aerr
+//	//}
+//	//g.PipelineData.GitRemote = authRemote
+//	//
+//	//
+//	//g.PipelineData.GitLocalBranch = g.PipelineData.GitHeadInfo.Ref
+//}
 
 func (g *scmGithub) Publish() error {
 

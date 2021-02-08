@@ -12,6 +12,7 @@ type Interface interface {
 
 	// init method will generate an authenticated client that can be used to comunicate with Scm
 	// MUST set pipelineData.GitParentPath
+	// MUST set pipelineData.GitLocalPath
 	Init(pipelineData *pipeline.Data, config config.BaseInterface, client *http.Client) error
 
 	// Should correctly parse Github Events, and fallback to reading the local repository
@@ -19,18 +20,29 @@ type Interface interface {
 	// - Determine if this is a pull request or a push.
 	//   - if it's a pull request the scm must retrieve the pull request payload and return it
 	//   - if its a push, the scm must retrieve the push payload and return it
-	// CAN NOT override
 	// MUST set pipelineData.IsPullRequest
-	// RETURNS scm.Payload
 	RetrievePayload() (*Payload, error)
+
+	//Populate the pipeline data using data retrieved from Git repo or APIs
+	// if PUSH
+	// MUST set pipelienData.GitRemote
+	// MUST set pipelineData.GitHeadInfo
+	// SHOULD set pipelineData.NearestTagDetails
+	//
+	// if PULL_REQUEST
+	// MUST set pipelineData.GitRemote
+	// MUST set pipelineData.GitBaseInfo
+	// MUST set pipelineData.GitHeadInfo
+	// SHOULD set pipelineData.NearestTagDetails
+	PopulatePipelineData(payload *Payload) error
 
 	// The local & remote repository should now contain code that has been the merged, tested and version bumped.
 	// this step should also do any scm specific releases (github release, asset uploading, etc)
 	// CAN override
+	// MUST set pipelineData.GitLocalBranch
 	// REQUIRES config.scm_repo_full_name
 	// REQUIRES pipelineData.ScmReleaseCommit
 	// REQUIRES pipelineData.GitLocalPath
-	// REQUIRES pipelineData.GitLocalBranch
 	// REQUIRES pipelineData.GitBaseInfo
 	// REQUIRES pipelineData.GitHeadInfo
 	// REQUIRES pipelineData.ReleaseArtifacts
