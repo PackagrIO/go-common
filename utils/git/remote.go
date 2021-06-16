@@ -17,6 +17,10 @@ func GitGetRemote(repoPath string, remoteName string) (string, error) {
 		return "", rerr
 	}
 
-	log.Printf("Found remote URL: %s", remote.PushUrl())
-	return remote.PushUrl(), nil
+	pushUrl := remote.PushUrl()
+	if len(pushUrl) > 0 {
+		return pushUrl, nil
+	}
+
+	return remote.Url(), nil
 }

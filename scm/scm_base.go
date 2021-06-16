@@ -7,9 +7,11 @@ import (
 	"github.com/packagrio/go-common/pipeline"
 	"github.com/packagrio/go-common/scm/models"
 	"github.com/packagrio/go-common/utils/git"
+	gitUrl "github.com/whilp/git-urls"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type scmBase struct {
@@ -52,12 +54,25 @@ func (g *scmBase) RetrievePayload() (*models.Payload, error) {
 		return nil, err
 	}
 
+	// try to determine the repo name from the remote
+	gitRemoteUrl, err := gitUrl.Parse(remoteUrl)
+	gitRemotePath := strings.Trim(gitRemoteUrl.Path, "/")
+	gitRemotePath = strings.TrimSuffix(gitRemotePath, ".git")
+	gitRemoteParts := strings.Split(gitRemotePath, "/")
+	var repoName string
+	if len(gitRemoteParts) >= 2 {
+		repoName = gitRemoteParts[len(gitRemoteParts)-1]
+	} else {
+		repoName = "placeholder"
+	}
 	return &models.Payload{
 		Head: &pipeline.ScmCommitInfo{
 			Sha: commit,
 			Ref: branch,
 			Repo: &pipeline.ScmRepoInfo{
 				CloneUrl: remoteUrl,
+				Name:     repoName,
+				FullName: gitRemotePath,
 			}},
 	}, nil
 }
