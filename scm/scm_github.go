@@ -46,22 +46,23 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 	if httpClient != nil {
 		//primarily used for testing.
 		g.Client = github.NewClient(httpClient)
-	} else if _, present := os.LookupEnv("GITHUB_TOKEN"); present {
+	} else if githubToken, present := os.LookupEnv("GITHUB_TOKEN"); present && len(githubToken) > 0 {
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+			&oauth2.Token{AccessToken: githubToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 
 		g.Client = github.NewClient(tc)
 
-		if _, isAction := os.LookupEnv("GITHUB_ACTION"); isAction {
+		if action, isAction := os.LookupEnv("GITHUB_ACTION"); isAction && len(action) > 0 {
+			log.Printf("Running in a Github Action")
 			//running as a github action.
 			g.Config.Set(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN_TYPE, "app")
 			g.isGithubActionEnv = true
 		}
 	} else if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN) {
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: g.Config.GetString("scm_github_access_token")},
+			&oauth2.Token{AccessToken: g.Config.GetString(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN)},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 
@@ -73,7 +74,7 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 
 	if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_API_ENDPOINT) {
 
-		apiUrl, aerr := url.Parse(g.Config.GetString("scm_github_api_endpoint"))
+		apiUrl, aerr := url.Parse(g.Config.GetString(config.PACKAGR_SCM_GITHUB_API_ENDPOINT))
 		if aerr != nil {
 			return aerr
 		}
