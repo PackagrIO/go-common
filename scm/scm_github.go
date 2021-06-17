@@ -71,15 +71,18 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
-	g.Client = github.NewClient(tc)
-
 	if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_API_ENDPOINT) {
-
-		apiUrl, aerr := url.Parse(g.Config.GetString(config.PACKAGR_SCM_GITHUB_API_ENDPOINT))
-		if aerr != nil {
-			return aerr
+		gheClient, err := github.NewEnterpriseClient(
+			g.Config.GetString(config.PACKAGR_SCM_GITHUB_API_ENDPOINT),
+			g.Config.GetString(config.PACKAGR_SCM_GITHUB_API_ENDPOINT),
+			tc,
+		)
+		if err != nil {
+			return err
 		}
-		g.Client.BaseURL = apiUrl
+		g.Client = gheClient
+	} else {
+		g.Client = github.NewClient(tc)
 	}
 
 	return nil
