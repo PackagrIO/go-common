@@ -20,35 +20,41 @@ func GitPush(repoPath string, localBranch string, remoteUrl string, remoteBranch
 	}
 
 	remoteCallbacks := git2go.RemoteCallbacks{
+		//TODO: check if this is necessary.
 		CertificateCheckCallback: func(cert *git2go.Certificate, valid bool, hostname string) git2go.ErrorCode {
 			return 0
 		},
-		//CredentialsCallback: func(url string, usernameFromUrl string, allowedTypes git2go.CredType) (git2go.ErrorCode, *git2go.Cred){
-		//	log.Printf("CRERDENTIALS LOOKUP: %s (%s) %v", url, usernameFromUrl, allowedTypes)
+		//CredentialsCallback: func(remoteUrl string, usernameFromUrl string, allowedTypes git2go.CredType) (git2go.ErrorCode, *git2go.Cred){
+		//	log.Printf("Authenticating to git remote: %s (%s) [type:%d]", remoteUrl, usernameFromUrl, allowedTypes)
 		//
 		//
 		//	i, cred := git2go.NewCredDefault()
 		//
 		//	if allowedTypes&git2go.CredTypeUserpassPlaintext != 0 {
-		//		log.Printf("sending user-paass")
-		//		i, cred = git2go.NewCredUserpassPlaintext("analogj", "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")
+		//		log.Printf("using user-paass")
+		//		parsed, err := url.Parse(remoteUrl)
+		//		if err != nil {
+		//			return git2go.ErrorCode(-1), nil
+		//		}
+		//		password, _ := parsed.User.Password()
+		//		i, cred = git2go.NewCredUserpassPlaintext(parsed.User.Username(),password)
 		//		return git2go.ErrorCode(i), &cred
 		//	}
-		//	if allowedTypes&git2go.CredTypeSshCustom != 0 {
-		//		log.Printf("ssh-not-implemented")
-		//		i, cred = git2go.NewCredSshKey(usernameFromUrl,"/root/.ssh/id_rsa.pub","/root/.ssh/id_rsa","")
-		//		return  git2go.ErrorCode(i), &cred
-		//	}
-		//	if allowedTypes&git2go.CredTypeSshKey != 0 {
-		//		log.Printf("not implemented-sending agaent")
-		//		//i, cred = git2go.NewCredSshKeyFromAgent("analogj")
-		//		return git2go.ErrorCode(-1), nil
-		//	}
-		//
-		//	if allowedTypes&git2go.CredTypeDefault == 0 {
-		//		log.Printf("invalid-cred-type")
-		//		return  git2go.ErrorCode(-1), nil
-		//	}
+		//	//if allowedTypes&git2go.CredTypeSshCustom != 0 {
+		//	//	log.Printf("using ssh")
+		//	//	i, cred = git2go.NewCredSshKey(usernameFromUrl,"/root/.ssh/id_rsa.pub","/root/.ssh/id_rsa","")
+		//	//	return  git2go.ErrorCode(i), &cred
+		//	//}
+		//	//if allowedTypes&git2go.CredTypeSshKey != 0 {
+		//	//	log.Printf("not implemented-sending agaent")
+		//	//	//i, cred = git2go.NewCredSshKeyFromAgent("analogj")
+		//	//	return git2go.ErrorCode(-1), nil
+		//	//}
+		//	//
+		//	//if allowedTypes&git2go.CredTypeDefault == 0 {
+		//	//	log.Printf("invalid-cred-type")
+		//	//	return  git2go.ErrorCode(-1), nil
+		//	//}
 		//
 		//	return git2go.ErrorCode(i), &cred
 		//},

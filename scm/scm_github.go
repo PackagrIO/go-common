@@ -48,6 +48,7 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 		//primarily used for testing.
 		g.Client = github.NewClient(httpClient)
 	} else if githubToken, present := os.LookupEnv("GITHUB_TOKEN"); present && len(githubToken) > 0 {
+		log.Printf("found GITHUB_TOKEN")
 		g.Config.Set(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN, githubToken)
 		if action, isAction := os.LookupEnv("GITHUB_ACTION"); isAction && len(action) > 0 {
 			log.Printf("Running in a Github Action")
@@ -56,6 +57,8 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 			g.isGithubActionEnv = true
 		}
 	} else if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN) {
+		log.Printf("found PACKAGR_SCM_GITHUB_ACCESS_TOKEN")
+
 		//already set, do nothing.
 	} else {
 		//no access token present
