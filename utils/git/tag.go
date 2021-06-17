@@ -88,11 +88,34 @@ func GitFindNearestTagName(repoPath string) (string, error) {
 		return "", oerr
 	}
 
+	//get the previous commit
+	ref, lerr := repo.References.Lookup("HEAD")
+	if lerr != nil {
+		return "", lerr
+	}
+	resRef, err := ref.Resolve()
+	if err != nil {
+		return "", err
+	}
+	headCommit, cerr := repo.LookupCommit(resRef.Target())
+	if cerr != nil {
+		return "", cerr
+	}
+
+	parentComit := headCommit.Parent(0)
+	defer parentComit.Free()
+
+	parentCommit, err := parentComit.AsCommit()
+	if err != nil {
+		return "", err
+	}
+
 	descOptions, derr := git2go.DefaultDescribeOptions()
 	if derr != nil {
 		return "", derr
 	}
 	descOptions.Strategy = git2go.DescribeTags
+	//descOptions.Pattern = "HEAD^"
 
 	formatOptions, ferr := git2go.DefaultDescribeFormatOptions()
 	if ferr != nil {
@@ -100,7 +123,7 @@ func GitFindNearestTagName(repoPath string) (string, error) {
 	}
 	formatOptions.AbbreviatedSize = 0
 
-	descr, derr := repo.DescribeWorkdir(&descOptions)
+	descr, derr := parentCommit.Describe(&descOptions)
 	if derr != nil {
 		return "", derr
 	}
