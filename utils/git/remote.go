@@ -24,3 +24,17 @@ func GitGetRemote(repoPath string, remoteName string) (string, error) {
 
 	return remote.Url(), nil
 }
+
+func GitSetRemote(repoPath string, remoteName string, remoteUrl string) (string, error) {
+	log.Printf("Setting repo (%s) remote (%s) to url (%s)", repoPath, remoteName, remoteUrl)
+	repo, oerr := git2go.OpenRepository(repoPath)
+	if oerr != nil {
+		return "", oerr
+	}
+
+	remote, err := repo.Remotes.Create(remoteName, remoteUrl)
+	if err != nil {
+		return "", nil
+	}
+	return remote.Url(), nil
+}

@@ -12,6 +12,7 @@ import (
 	githubHelper "github.com/packagrio/go-common/scm/github"
 	"github.com/packagrio/go-common/scm/models"
 	"github.com/packagrio/go-common/utils/git"
+	gitUrl "github.com/whilp/git-urls"
 	"golang.org/x/oauth2"
 	"io/ioutil"
 	"log"
@@ -47,13 +48,7 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 		//primarily used for testing.
 		g.Client = github.NewClient(httpClient)
 	} else if githubToken, present := os.LookupEnv("GITHUB_TOKEN"); present && len(githubToken) > 0 {
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: githubToken},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-
-		g.Client = github.NewClient(tc)
-
+		g.Config.Set(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN, githubToken)
 		if action, isAction := os.LookupEnv("GITHUB_ACTION"); isAction && len(action) > 0 {
 			log.Printf("Running in a Github Action")
 			//running as a github action.
@@ -61,16 +56,19 @@ func (g *scmGithub) Init(pipelineData *pipeline.Data, myConfig config.BaseInterf
 			g.isGithubActionEnv = true
 		}
 	} else if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN) {
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: g.Config.GetString(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN)},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-
-		g.Client = github.NewClient(tc)
+		//already set, do nothing.
 	} else {
 		//no access token present
 		return fmt.Errorf("github SCM requires an access token")
 	}
+
+	//create an authenticated client
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: g.Config.GetString(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN)},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	g.Client = github.NewClient(tc)
 
 	if g.Config.IsSet(config.PACKAGR_SCM_GITHUB_API_ENDPOINT) {
 
@@ -93,7 +91,15 @@ func (g *scmGithub) RetrievePayload() (*models.Payload, error) {
 		if !g.Config.IsSet(config.PACKAGR_SCM_PULL_REQUEST) {
 			log.Print("This is not a pull request.")
 
-			return g.scmBase.RetrievePayload()
+			payload, err := g.scmBase.RetrievePayload()
+			if err != nil {
+				return nil, err
+			}
+
+			if !g.Config.IsSet(config.PACKAGR_SCM_REPO_FULL_NAME) {
+				g.Config.Set(config.PACKAGR_SCM_REPO_FULL_NAME, payload.Head.Repo.FullName)
+			}
+			return payload, nil
 			//make this as similar to a pull request as possible
 		} else {
 			log.Print("This is a pull request")
@@ -212,8 +218,15 @@ func (g *scmGithub) RetrievePayload() (*models.Payload, error) {
 
 func (g *scmGithub) Publish() error {
 
+	//convert the remote url to an authenticated HTTP Remote
+	httpGitRemote, err := g.authGitRemoteUrl(g.PipelineData.GitRemote)
+	if err != nil {
+		return err
+	}
+	g.PipelineData.GitRemote = httpGitRemote
+
 	//do a basic publish (git push).
-	err := g.scmBase.Publish()
+	err = g.scmBase.Publish()
 	if err != nil {
 		return err
 	}
@@ -389,6 +402,36 @@ func (g *scmGithub) MaskSecret(secret string) error {
 }
 
 //private
+
+// since this is a GithubSCM, we're going to assume that we have a token of some sort.
+// We're going to attempt to create a new authenticated https remote URL and use that for authentication, rather than
+// the existing origin, incase its setup for ssh (public/private key) auth.
+// git@github.com:AnalogJ/golang_analogj_test.git
+// https://github.com/AnalogJ/golang_analogj_test.git
+func (g *scmGithub) authGitRemoteUrl(originRemote string) (string, error) {
+	originRemoteUrl, err := gitUrl.Parse(originRemote)
+	if err != nil {
+		return "", err
+	}
+	// now we need to override theURL parts, and put them together as a HTTP remote (with authentication).
+	originRemoteUrl.Scheme = "https"
+
+	var gitRemoteUsername string
+	var gitRemotePassword string
+	if g.Config.GetString(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN_TYPE) == "app" {
+		// see https://developer.github.com/apps/building-github-apps/authenticating-with-github-apps/
+		gitRemoteUsername = "x-access-token"
+		gitRemotePassword = g.Config.GetString(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN)
+	} else {
+		gitRemoteUsername = g.Config.GetString(config.PACKAGR_SCM_GITHUB_ACCESS_TOKEN)
+		gitRemotePassword = ""
+	}
+
+	if gitRemoteUsername != "" || gitRemotePassword != "" {
+		originRemoteUrl.User = url.UserPassword(gitRemoteUsername, gitRemotePassword)
+	}
+	return originRemoteUrl.String(), nil
+}
 
 // the current commit should be a tag, we need to find the previous tag
 func (g *scmGithub) populateNearestTag() error {

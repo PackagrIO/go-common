@@ -89,6 +89,10 @@ func (g *scmBase) PopulatePipelineData(payload *models.Payload) error {
 		if err := g.PipelineData.GitBaseInfo.Validate(); err != nil {
 			return err
 		}
+		g.PipelineData.GitRemote = payload.Base.Repo.CloneUrl
+	} else {
+		//this is not a PR, so use the HEAD for the CloneURL
+		g.PipelineData.GitRemote = payload.Head.Repo.CloneUrl
 	}
 	return nil
 }
@@ -111,7 +115,7 @@ func (s *scmBase) Publish() error {
 		destBranchName = s.PipelineData.GitHeadInfo.Ref
 	}
 
-	perr := git.GitPush(s.PipelineData.GitLocalPath, s.PipelineData.GitLocalBranch, destBranchName, fmt.Sprintf("v%s", s.PipelineData.ReleaseVersion))
+	perr := git.GitPush(s.PipelineData.GitLocalPath, s.PipelineData.GitLocalBranch, s.PipelineData.GitRemote, destBranchName, fmt.Sprintf("v%s", s.PipelineData.ReleaseVersion))
 	if perr != nil {
 		return perr
 	}

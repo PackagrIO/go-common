@@ -41,6 +41,7 @@ type Interface interface {
 	// this step should also do any scm specific releases (github release, asset uploading, etc)
 	// CAN override
 	// MUST set pipelineData.GitLocalBranch
+	// REQUIRES pipelineData.GitRemote
 	// REQUIRES config.scm_repo_full_name
 	// REQUIRES pipelineData.ScmReleaseCommit
 	// REQUIRES pipelineData.GitLocalPath
