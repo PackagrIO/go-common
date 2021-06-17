@@ -315,6 +315,12 @@ func (g *scmGithub) PublishAssets(releaseData interface{}) error {
 	ctx := context.Background()
 	parts := strings.Split(g.Config.GetString(config.PACKAGR_SCM_REPO_FULL_NAME), "/")
 
+	//populate the release assets
+	releaseAssets, err := g.scmBase.parseReleaseAssetNames(g.Config.GetStringSlice(config.PACKAGR_SCM_RELEASE_ASSETS))
+	if err != nil {
+		return err
+	}
+	g.PipelineData.ReleaseAssets = releaseAssets
 	for _, assetData := range g.PipelineData.ReleaseAssets {
 		// handle templated destination artifact names
 		artifactNamePopulated, aerr := utils.PopulateTemplate(assetData.ArtifactName, g.PipelineData)

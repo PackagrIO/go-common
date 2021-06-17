@@ -129,3 +129,30 @@ func (s *scmBase) Publish() error {
 
 	return nil
 }
+
+func (s *scmBase) parseReleaseAssetNames(releaseAssetItems []string) ([]pipeline.ScmReleaseAsset, error) {
+	releaseAssets := []pipeline.ScmReleaseAsset{}
+
+	for _, item := range releaseAssetItems {
+		if item == "" {
+			return nil, fmt.Errorf("invalid release asset path")
+		}
+		assetParts := strings.SplitN(item, ":", 2)
+		itemLocalPath := assetParts[0]
+		var itemArtifactName string
+		if len(assetParts) == 2 && assetParts[1] != "" {
+			itemArtifactName = assetParts[1]
+		} else {
+			itemArtifactName = filepath.Base(itemLocalPath)
+		}
+
+		releaseAsset := pipeline.ScmReleaseAsset{
+			LocalPath:    itemLocalPath,
+			ArtifactName: itemArtifactName,
+			ContentType:  "application/octet-stream",
+		}
+
+		releaseAssets = append(releaseAssets, releaseAsset)
+	}
+	return releaseAssets, nil
+}
