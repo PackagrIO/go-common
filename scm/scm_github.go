@@ -148,6 +148,11 @@ func (g *scmGithub) RetrievePayload() (*models.Payload, error) {
 			return nil, errors.ScmPayloadFormatError("Event Payload not present")
 		}
 
+		//set the fullname
+		if !g.Config.IsSet(config.PACKAGR_SCM_REPO_FULL_NAME) {
+			g.Config.Set(config.PACKAGR_SCM_REPO_FULL_NAME, utils.GetEnv("GITHUB_REPOSITORY", ""))
+		}
+
 		//open & parse JSON File
 		jsonBytes, err := ioutil.ReadFile(eventPayloadPath)
 		if err != nil {
