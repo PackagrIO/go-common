@@ -2,6 +2,7 @@ package github
 
 import (
 	"encoding/json"
+	"github.com/analogj/go-util/utils"
 	"github.com/google/go-github/v32/github"
 	"github.com/packagrio/go-common/pipeline"
 	"github.com/packagrio/go-common/scm/models"
@@ -28,7 +29,7 @@ type WorkflowDispatchEvent struct {
 func PayloadFromGithubWorkflowDispatchEvent(wfDispatchEvent WorkflowDispatchEvent) *models.Payload {
 	return &models.Payload{
 		Head: &pipeline.ScmCommitInfo{
-			//Sha: wfDispatchEvent.GetAfter(),
+			Sha: utils.GetEnv("GITHUB_SHA", ""),
 			Ref: *wfDispatchEvent.Ref,
 			Repo: &pipeline.ScmRepoInfo{
 				CloneUrl: wfDispatchEvent.Repo.GetCloneURL(),
