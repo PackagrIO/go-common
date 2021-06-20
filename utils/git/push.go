@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	git2go "gopkg.in/libgit2/git2go.v25"
+	"strings"
 )
 
 func GitPush(repoPath string, localBranch string, remoteUrl string, remoteBranch string, tagName string) error {
@@ -65,6 +66,9 @@ func GitPush(repoPath string, localBranch string, remoteUrl string, remoteBranch
 		},
 	}
 
+	//strip the fully qualified branch ref if present.
+	localBranch = strings.TrimPrefix(localBranch, "refs/heads/")
+	remoteBranch = strings.TrimPrefix(remoteBranch, "refs/heads/")
 	pushSpecs := []string{
 		fmt.Sprintf("refs/heads/%s:refs/heads/%s", localBranch, remoteBranch),
 		fmt.Sprintf("refs/tags/%s:refs/tags/%s", tagName, tagName),
