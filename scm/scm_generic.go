@@ -54,3 +54,7 @@ func (s *scmGeneric) SetOutput(name string, value string) error {
 func (s *scmGeneric) MaskSecret(secret string) error {
 	return nil
 }
+
+func (b *scmGeneric) CreateTagAtReference(tagName string) error {
+	return nil
+}
