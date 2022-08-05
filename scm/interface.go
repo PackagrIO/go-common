@@ -92,4 +92,8 @@ type Interface interface {
 
 	// To mask a value in the logs
 	MaskSecret(secret string) error
+
+	// create a lightweight tag at a specific git sha, using Github API.
+	// https://docs.github.com/en/rest/git/refs#create-a-reference
+	CreateTagAtReference(tagName string) error
 }

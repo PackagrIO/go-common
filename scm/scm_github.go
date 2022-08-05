@@ -418,6 +418,22 @@ func (g *scmGithub) MaskSecret(secret string) error {
 	return nil
 }
 
+// create a lightweight tag at a specific git sha, using Github API.
+// https://docs.github.com/en/rest/git/refs#create-a-reference
+func (g *scmGithub) CreateTagAtReference(tagName string) error {
+	parts := strings.Split(g.PipelineData.GitHeadInfo.Repo.FullName, "/")
+	sha := g.PipelineData.GitHeadInfo.Sha
+
+	ctx := context.Background()
+	_, _, err := g.Client.Git.CreateRef(ctx, parts[0], parts[1], &github.Reference{
+		Ref: github.String(fmt.Sprintf("refs/tags/%s", tagName)),
+		Object: &github.GitObject{
+			SHA: github.String(sha),
+		},
+	})
+	return err
+}
+
 //private
 
 // since this is a GithubSCM, we're going to assume that we have a token of some sort.

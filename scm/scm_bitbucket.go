@@ -52,3 +52,7 @@ func (b *scmBitbucket) SetOutput(name string, value string) error {
 func (b *scmBitbucket) MaskSecret(secret string) error {
 	return nil
 }
+
+func (b *scmBitbucket) CreateTagAtReference(tagName string) error {
+	return nil
+}
