@@ -1,7 +1,7 @@
 package github
 
 import (
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/packagrio/go-common/pipeline"
 	"github.com/packagrio/go-common/scm/models"
 )
