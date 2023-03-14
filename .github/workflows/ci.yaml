@@ -7,6 +7,10 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     container: ghcr.io/packagrio/packagr:latest-golang
+    env:
+      # gives write access to PackagrIO/test_npm_private_repo
+      # https://github.com/organizations/PackagrIO/settings/personal-access-tokens
+      GITHUB_TOKEN: ${{ secrets.GO_COMMON_TEST_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
