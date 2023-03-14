@@ -5,6 +5,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/packagrio/go-common/pipeline"
+	"log"
 )
 
 func GitTag(repoPath string, version string, message string, signature *object.Signature) (string, error) {
@@ -50,16 +51,37 @@ func GitGetTagDetails(repoPath string, tagName string) (*pipeline.GitTagDetails,
 		return nil, terr
 	}
 
-	commitObj, cerr := repo.CommitObject(tagRef.Hash())
-	if cerr != nil {
-		return nil, cerr
-	}
+	tag, lerr := repo.TagObject(tagRef.Hash()) //assume its an annotated tag.
 
-	return &pipeline.GitTagDetails{
-		TagShortName: tagName,
-		CommitSha:    tagRef.Hash().String(),
-		CommitDate:   commitObj.Author.When,
-	}, nil
+	var currentTag *pipeline.GitTagDetails
+	if lerr != nil {
+		//this is a lightweight tag, not an annotated tag.
+		commitRef, rerr := repo.CommitObject(tagRef.Hash())
+		if rerr != nil {
+			return nil, rerr
+		}
+
+		author := commitRef.Author
+
+		log.Printf("Light-weight tag (%s) Commit ID: %s, DATE: %s", tagName, commitRef.Hash.String(), author.When.String())
+
+		currentTag = &pipeline.GitTagDetails{
+			TagShortName: tagName,
+			CommitSha:    commitRef.Hash.String(),
+			CommitDate:   author.When,
+		}
+
+	} else {
+
+		log.Printf("Annotated tag (%s) Tag ID: %s, Commit ID: %s, DATE: %s", tagName, tag.Hash.String(), tag.Target.String(), tag.Tagger.When.String())
+
+		currentTag = &pipeline.GitTagDetails{
+			TagShortName: tagName,
+			CommitSha:    tag.Target.String(),
+			CommitDate:   tag.Tagger.When,
+		}
+	}
+	return currentTag, nil
 }
 
 //TODO: enable this
