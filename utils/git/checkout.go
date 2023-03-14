@@ -6,6 +6,7 @@ import (
 	"log"
 )
 
+//checkout remote branch, create local branch if it doesn't exist
 func GitCheckout(repoPath string, branchName string) error {
 	repo, oerr := git2go.OpenRepository(repoPath)
 	if oerr != nil {
