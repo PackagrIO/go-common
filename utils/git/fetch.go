@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// github will automatically create merge commits for PRs against the default branch (usually master/main)
+// this function will fetch a github PR merge commit mapped to a local branch, and then checkout that branch.
 // https://stackoverflow.com/questions/13638235/git-checkout-remote-reference
 // https://gist.github.com/danielfbm/ba4ae91efa96bb4771351bdbd2c8b06f
 // https://github.com/libgit2/git2go/issues/126
