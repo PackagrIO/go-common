@@ -26,7 +26,26 @@ func TestGitTag(t *testing.T) {
 	require.Equal(t, foundTagCommmit.CommitSha, tagCommit)
 }
 
-func TestGitGetTagDetails(t *testing.T) {
+func TestGitGetTagDetails_Lightweight(t *testing.T) {
+	//setup
+	gitRemote := "https://github.com/AnalogJ/npm_analogj_test.git"
+	parentPath := os.TempDir()
+	repoName := "test_repo"
+	absPath, err := GitClone(parentPath, repoName, gitRemote)
+	require.NoError(t, err)
+	defer os.RemoveAll(absPath)
+
+	//test
+	tagName := "v1.0.10"
+	tagDetails, err := GitGetTagDetails(absPath, tagName)
+	require.NoError(t, err)
+
+	//assert
+	require.Equal(t, tagName, tagDetails.TagShortName)
+	require.Equal(t, "86c62a8bf3c269eb6f82e9f8f1bc0646d5f46ef1", tagDetails.CommitSha)
+}
+
+func TestGitGetTagDetails_Annotated(t *testing.T) {
 	//setup
 	gitRemote := "https://github.com/AnalogJ/npm_analogj_test.git"
 	parentPath := os.TempDir()

@@ -1,0 +1,23 @@
+name: CI
+# This workflow is triggered on pushes to the repository.
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    name: Test
+    runs-on: ubuntu-latest
+    container: golang:1.18
+    env:
+      # gives write access to PackagrIO/test_npm_private_repo
+      # https://github.com/organizations/PackagrIO/settings/personal-access-tokens
+      GITHUB_TOKEN: ${{ secrets.GO_COMMON_TEST_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Test
+        env:
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          go mod vendor
+          go test -mod vendor -race ./...

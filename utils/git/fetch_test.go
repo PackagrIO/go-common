@@ -31,3 +31,27 @@ func TestGitFetchPullRequest(t *testing.T) {
 	require.Equal(t, "acccf80ecd287afd6d5cb6975d3114c52fe4e03e", commitId) //merge commit for PR 16
 	require.Equal(t, localBranchName, branch)
 }
+
+func TestGitFetchPullRequest_EmptyTemplates(t *testing.T) {
+	//setup
+	gitRemote := "https://github.com/AnalogJ/npm_analogj_test.git"
+	parentPath := os.TempDir()
+	repoName := "test_repo"
+	absPath, err := GitClone(parentPath, repoName, gitRemote)
+	require.NoError(t, err)
+	defer os.RemoveAll(absPath)
+
+	//test
+	pullRequestNumber := "16"
+	localBranchName := "test_fetch_branch"
+	err = GitFetchPullRequest(absPath, pullRequestNumber, localBranchName, "", "")
+	require.NoError(t, err)
+	commitId, err := GitGetHeadCommit(absPath)
+	branch, err := GitGetBranch(absPath)
+
+	//assert
+	require.NoError(t, err)
+
+	require.Equal(t, "acccf80ecd287afd6d5cb6975d3114c52fe4e03e", commitId) //merge commit for PR 16
+	require.Equal(t, localBranchName, branch)
+}

@@ -19,7 +19,10 @@ func TestGitGenerateChangelog(t *testing.T) {
 	require.NoError(t, err)
 
 	//test
-	changelog, err := GitGenerateChangelog(absPath, "4feed9fb27bfebba92d18839fb0a19866b7eb16a", "c800faadaed8ad71f3ddf1fb4bc3f22c6d8969a1")
+	changelog, err := GitGenerateChangelog(absPath,
+		"4feed9fb27bfebba92d18839fb0a19866b7eb16a", //(v1.0.10) Automated packaging of release by CapsuleCD
+		"c800faadaed8ad71f3ddf1fb4bc3f22c6d8969a1", //Merge 2ec74dd into 4feed9f
+	)
 
 	//assert
 	require.NoError(t, err)

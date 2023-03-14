@@ -2,8 +2,9 @@ package git
 
 import (
 	"fmt"
-	"github.com/packagrio/go-common/errors"
-	git2go "gopkg.in/libgit2/git2go.v25"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"log"
 	"time"
 )
@@ -32,16 +33,12 @@ func GitFetchPullRequest(repoPath string, pullRequestNumber string, localBranchN
 	destPattern := fmt.Sprintf(destPatternTmpl, pullRequestNumber)
 	refspec := fmt.Sprintf("+%s:%s", srcPattern, destPattern)
 
-	repo, oerr := git2go.OpenRepository(repoPath)
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return oerr
 	}
 
-	checkoutOpts := &git2go.CheckoutOpts{
-		Strategy: git2go.CheckoutSafe | git2go.CheckoutRecreateMissing | git2go.CheckoutAllowConflicts | git2go.CheckoutUseTheirs,
-	}
-
-	remote, lerr := repo.Remotes.Lookup("origin")
+	remote, lerr := repo.Remote("origin")
 	if lerr != nil {
 		log.Print("Failed to lookup origin remote")
 		return lerr
@@ -49,63 +46,32 @@ func GitFetchPullRequest(repoPath string, pullRequestNumber string, localBranchN
 	time.Sleep(time.Second)
 
 	// fetch the pull request merge and head references into this repo.
-	ferr := remote.Fetch([]string{refspec}, new(git2go.FetchOptions), "")
+	ferr := remote.Fetch(&git.FetchOptions{
+		RefSpecs: []config.RefSpec{config.RefSpec(refspec)},
+	})
 	if ferr != nil {
 		log.Print("Failed to fetch PR reference from remote")
 		return ferr
 	}
 
 	// Get a reference to the PR merge branch in this repo
-	prRef, err := repo.References.Lookup(destPattern)
+	prRef, err := repo.Reference(plumbing.ReferenceName(destPattern), true)
 	if err != nil {
 		log.Print("Failed to find PR reference locally: " + destPattern)
 		return err
 	}
 
-	// Lookup commmit for PR branch
-	prCommit, err := repo.LookupCommit(prRef.Target())
+	workTree, err := repo.Worktree()
 	if err != nil {
-		log.Print(fmt.Sprintf("Failed to find PR head commit: %s", prRef.Target()))
 		return err
 	}
-	defer prCommit.Free()
-
-	prLocalBranch, err := repo.LookupBranch(localBranchName, git2go.BranchLocal)
-	// No local branch, lets create one
-	if prLocalBranch == nil || err != nil {
-		// Creating local branch
-		prLocalBranch, err = repo.CreateBranch(localBranchName, prCommit, false)
-		if err != nil {
-			log.Print("Failed to create local branch: " + localBranchName)
-			return err
-		}
-	}
-	if prLocalBranch == nil {
-		return errors.ScmFilesystemError("Error while locating/creating local branch")
-	}
-	defer prLocalBranch.Free()
-
-	// Getting the tree for the branch
-	localCommit, err := repo.LookupCommit(prLocalBranch.Target())
-	if err != nil {
-		log.Print("Failed to lookup for commit in local branch " + localBranchName)
-		return err
-	}
-	//defer localCommit.Free()
-
-	tree, err := repo.LookupTree(localCommit.TreeId())
-	if err != nil {
-		log.Print("Failed to lookup for tree " + localBranchName)
-		return err
-	}
-	//defer tree.Free()
-
-	// Checkout the tree
-	err = repo.CheckoutTree(tree, checkoutOpts)
-	if err != nil {
-		log.Print("Failed to checkout tree " + localBranchName)
-		return err
-	}
-	// Setting the Head to point to our branch
-	return repo.SetHead("refs/heads/" + localBranchName)
+	localBranchRef := plumbing.NewBranchReferenceName(localBranchName)
+	err = workTree.Checkout(&git.CheckoutOptions{
+		Hash:   prRef.Hash(), //plumbing.NewHash(),
+		Branch: localBranchRef,
+		Force:  false,
+		Keep:   false,
+		Create: true,
+	})
+	return err
 }

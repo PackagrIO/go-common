@@ -3,12 +3,16 @@ package git
 import (
 	"fmt"
 	goUtils "github.com/analogj/go-util/utils"
-	git2go "gopkg.in/libgit2/git2go.v25"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"strings"
 )
 
+//https://github.com/go-git/go-git/issues/36
 func GitGenerateChangelog(repoPath string, baseSha string, headSha string) (string, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return "", oerr
 	}
@@ -17,33 +21,38 @@ func GitGenerateChangelog(repoPath string, baseSha string, headSha string) (stri
 	------------- | ------------- | ------------- | -------------
 	`)
 
-	revWalk, werr := repo.Walk()
-	if werr != nil {
-		return "", werr
+	start, err := repo.ResolveRevision(plumbing.Revision(baseSha))
+	if err != nil {
+		return "", err
 	}
 
-	rerr := revWalk.PushRange(fmt.Sprintf("%s..%s", baseSha, headSha))
-	if rerr != nil {
-		return "", rerr
+	end, err := repo.ResolveRevision(plumbing.Revision(headSha))
+	if err != nil {
+		return "", err
 	}
 
-	revWalk.Iterate(func(commit *git2go.Commit) bool {
-		markdown += fmt.Sprintf("%s | %.8s | %s | %s\n", //TODO: this should have a link for the SHA.
-			commit.Author().When.UTC().Format("2006-01-02T15:04Z"),
-			commit.Id().String(),
-			cleanCommitMessage(commit.Message()),
-			commit.Author().Name,
-		)
-		return true
+	logIter, err := repo.Log(&git.LogOptions{
+		From:  *end,
+		Order: git.LogOrderCommitterTime,
 	})
-	//for {
-	//	err := revWalk.Next()
-	//	if err != nil {
-	//		break
-	//	}
-	//
-	//	log.Info(gi.String())
-	//}
+	if err != nil {
+		return "", err
+	}
+
+	logIter.ForEach(func(c *object.Commit) error {
+		if c.Hash == *start {
+			return storer.ErrStop
+		}
+
+		markdown += fmt.Sprintf("%s | %.8s | %s | %s\n", //TODO: this should have a link for the SHA.
+			c.Author.When.UTC().Format("2006-01-02T15:04Z"),
+			c.Hash.String(),
+			cleanCommitMessage(c.Message),
+			c.Author.Name,
+		)
+
+		return nil
+	})
 
 	return markdown, nil
 }

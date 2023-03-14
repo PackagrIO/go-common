@@ -1,6 +1,7 @@
 package git
 
 import (
+	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -39,8 +40,12 @@ func TestGitCreateBranchFromHead(t *testing.T) {
 
 	//test
 	branch, err := GitCreateBranchFromHead(absPath, "test_branch")
+	require.NoError(t, err)
+	repo, err := git.PlainOpen(absPath)
+	require.NoError(t, err)
+	_, err = repo.Branch("test_branch")
+	require.NoError(t, err)
 
 	//assert
-	require.NoError(t, err)
 	require.Equal(t, "test_branch", branch)
 }

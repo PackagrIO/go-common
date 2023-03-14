@@ -2,13 +2,15 @@ package git
 
 import (
 	"fmt"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/packagrio/go-common/pipeline"
-	git2go "gopkg.in/libgit2/git2go.v25"
 	"log"
 )
 
-func GitTag(repoPath string, version string, message string, signature *git2go.Signature) (string, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
+func GitTag(repoPath string, version string, message string, signature *object.Signature) (string, error) {
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return "", oerr
 	}
@@ -17,121 +19,156 @@ func GitTag(repoPath string, version string, message string, signature *git2go.S
 		return "", herr
 	}
 
-	commit, lerr := repo.LookupCommit(commitHead.Target())
+	commitObject, lerr := repo.CommitObject(commitHead.Hash())
 	if lerr != nil {
 		return "", lerr
 	}
+	commit := commitObject.Hash
 
 	//tagId, terr := repo.Tags.CreateLightweight(version, commit, false)
-	tagId, terr := repo.Tags.Create(version, commit, signature, fmt.Sprintf("(%s) %s", version, message))
+	tagId, terr := repo.CreateTag(version, commit, &git.CreateTagOptions{
+		Tagger:  signature,
+		Message: fmt.Sprintf("(%s) %s", version, message),
+	})
 	if terr != nil {
 		return "", terr
 	}
 
-	tagObj, terr := repo.LookupTag(tagId)
+	tagObj, terr := repo.TagObject(tagId.Hash())
 	if terr != nil {
 		return "", terr
 	}
-	return tagObj.TargetId().String(), terr
+	return tagObj.Target.String(), terr
 }
 
 func GitGetTagDetails(repoPath string, tagName string) (*pipeline.GitTagDetails, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return nil, oerr
 	}
 
-	id, aerr := repo.References.Dwim(tagName)
-	if aerr != nil {
-		return nil, aerr
+	tagRef, terr := repo.Tag(tagName)
+	if terr != nil {
+		return nil, terr
 	}
-	tag, lerr := repo.LookupTag(id.Target()) //assume its an annotated tag.
+
+	tag, lerr := repo.TagObject(tagRef.Hash()) //assume its an annotated tag.
 
 	var currentTag *pipeline.GitTagDetails
 	if lerr != nil {
 		//this is a lightweight tag, not an annotated tag.
-		commitRef, rerr := repo.LookupCommit(id.Target())
+		commitRef, rerr := repo.CommitObject(tagRef.Hash())
 		if rerr != nil {
 			return nil, rerr
 		}
 
-		author := commitRef.Author()
+		author := commitRef.Author
 
-		log.Printf("Light-weight tag (%s) Commit ID: %s, DATE: %s", tagName, commitRef.Id().String(), author.When.String())
+		log.Printf("Light-weight tag (%s) Commit ID: %s, DATE: %s", tagName, commitRef.Hash.String(), author.When.String())
 
 		currentTag = &pipeline.GitTagDetails{
 			TagShortName: tagName,
-			CommitSha:    commitRef.Id().String(),
+			CommitSha:    commitRef.Hash.String(),
 			CommitDate:   author.When,
 		}
 
 	} else {
 
-		log.Printf("Annotated tag (%s) Tag ID: %s, Commit ID: %s, DATE: %s", tagName, tag.Id().String(), tag.TargetId().String(), tag.Tagger().When.String())
+		log.Printf("Annotated tag (%s) Tag ID: %s, Commit ID: %s, DATE: %s", tagName, tag.Hash.String(), tag.Target.String(), tag.Tagger.When.String())
 
 		currentTag = &pipeline.GitTagDetails{
 			TagShortName: tagName,
-			CommitSha:    tag.TargetId().String(),
-			CommitDate:   tag.Tagger().When,
+			CommitSha:    tag.Target.String(),
+			CommitDate:   tag.Tagger.When,
 		}
 	}
 	return currentTag, nil
-
 }
 
 // Get the nearest tag on branch.
 // tag must be nearest, ie. sorted by their distance from the HEAD of the branch, not the date or tagname.
 // basically `git describe --tags --abbrev=0`
+//https://github.com/go-git/go-git/pull/584
 func GitFindNearestTagName(repoPath string) (string, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return "", oerr
 	}
 
 	//get the previous commit
-	ref, lerr := repo.References.Lookup("HEAD")
+	ref, lerr := repo.Head()
 	if lerr != nil {
 		return "", lerr
 	}
-	resRef, err := ref.Resolve()
-	if err != nil {
-		return "", err
-	}
-	headCommit, cerr := repo.LookupCommit(resRef.Target())
+	//resRef, err := ref.Resolve()
+	//if err != nil {
+	//	return "", err
+	//}
+	headCommit, cerr := repo.CommitObject(ref.Hash())
 	if cerr != nil {
 		return "", cerr
 	}
 
-	parentComit := headCommit.Parent(0)
-	defer parentComit.Free()
-
-	parentCommit, err := parentComit.AsCommit()
+	logIter, err := repo.Log(&git.LogOptions{
+		From:  headCommit.Hash,
+		Order: git.LogOrderCommitterTime,
+	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not get log: %v", err)
 	}
 
-	descOptions, derr := git2go.DefaultDescribeOptions()
-	if derr != nil {
-		return "", derr
-	}
-	descOptions.Strategy = git2go.DescribeTags
-	//descOptions.Pattern = "HEAD^"
-
-	formatOptions, ferr := git2go.DefaultDescribeFormatOptions()
-	if ferr != nil {
-		return "", ferr
-	}
-	formatOptions.AbbreviatedSize = 0
-
-	descr, derr := parentCommit.Describe(&descOptions)
-	if derr != nil {
-		return "", derr
+	tags, err := buildTagRefMap(repo)
+	if err != nil {
+		return "", fmt.Errorf("could not build tag ref map: %v", err)
 	}
 
-	nearestTag, ferr := descr.Format(&formatOptions)
-	if ferr != nil {
-		return "", ferr
+	distance := 0
+
+	var tagStr string
+	logIter.ForEach(func(c *object.Commit) error {
+		log.Printf("Commit: %s", c.Hash.String())
+		if tag, exists := tags[c.Hash]; exists {
+			tagStr = tag.Name().Short()
+			return fmt.Errorf("found tag") //break
+		}
+		distance++
+		return nil
+	})
+
+	if tagStr != "" {
+		return tagStr, nil
+	}
+	return "", fmt.Errorf("could not find latest tag")
+}
+
+//from https://github.com/go-git/go-git/pull/584/files
+func buildTagRefMap(r *git.Repository) (map[plumbing.Hash]*plumbing.Reference, error) {
+	iter, err := r.Tags()
+	if err != nil {
+		return nil, err
+	}
+	tags := map[plumbing.Hash]*plumbing.Reference{}
+
+	if err := iter.ForEach(func(ref *plumbing.Reference) error {
+		log.Printf("Tag: %s", ref.Name())
+		obj, err := r.TagObject(ref.Hash())
+		switch err {
+		case nil:
+			// Tag object present
+			// t is an annotated tag
+			tags[obj.Target] = ref
+		case plumbing.ErrObjectNotFound:
+			// t is a lighweight tag
+			tags[ref.Hash()] = ref
+		default:
+			// Some other error
+			return err
+		}
+		return nil
+	}); err != nil {
+		// Handle outer iterator error
+		return nil, err
 	}
 
-	return nearestTag, nil
+	return tags, nil
 }

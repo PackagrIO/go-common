@@ -1,55 +1,45 @@
 package git
 
-import git2go "gopkg.in/libgit2/git2go.v25"
+import (
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"log"
+)
 
 //Add all modified files to index, and commit.
-func GitCommit(repoPath string, message string, signature *git2go.Signature) error {
-	repo, oerr := git2go.OpenRepository(repoPath)
+func GitCommit(repoPath string, message string, signature *object.Signature) error {
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return oerr
 	}
 
-	//get repo index.
-	idx, ierr := repo.Index()
-	if ierr != nil {
-		return ierr
+	//get repo working tree.
+	workTree, err := repo.Worktree()
+	if err != nil {
+		return err
 	}
-	aerr := idx.AddAll([]string{}, git2go.IndexAddDefault, nil)
+	aerr := workTree.AddWithOptions(&git.AddOptions{All: true})
 	if aerr != nil {
 		return aerr
 	}
-	treeId, wterr := idx.WriteTree()
-	if wterr != nil {
-		return wterr
-	}
-	werr := idx.Write()
-	if werr != nil {
-		return werr
+
+	// We can verify the current status of the worktree using the method Status.
+	status, serr := workTree.Status()
+	log.Printf("Status: %v", status)
+	if serr != nil {
+		return serr
 	}
 
-	tree, lerr := repo.LookupTree(treeId)
-	if lerr != nil {
-		return lerr
-	}
-
-	currentBranch, berr := repo.Head()
-	if berr != nil {
-		return berr
-	}
-
-	commitTarget, terr := repo.LookupCommit(currentBranch.Target())
-	if terr != nil {
-		return terr
-	}
-
-	_, cerr := repo.CreateCommit("HEAD", signature, signature, message, tree, commitTarget)
-	//if(cerr != nil){return cerr}
+	// Commits the current staging area to the repository
+	_, cerr := workTree.Commit(message, &git.CommitOptions{
+		Author: signature,
+	})
 
 	return cerr
 }
 
 func GitGetHeadCommit(repoPath string) (string, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return "", oerr
 	}
@@ -57,10 +47,9 @@ func GitGetHeadCommit(repoPath string) (string, error) {
 	if herr != nil {
 		return "", herr
 	}
-
-	commit, lerr := repo.LookupCommit(commitHead.Target())
+	commitObject, lerr := repo.CommitObject(commitHead.Hash())
 	if lerr != nil {
 		return "", lerr
 	}
-	return commit.Id().String(), nil
+	return commitObject.Hash.String(), nil
 }

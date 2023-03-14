@@ -1,44 +1,37 @@
 package git
 
 import (
-	git2go "gopkg.in/libgit2/git2go.v25"
-	"log"
+	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 func GitGetBranch(repoPath string) (string, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
+
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return "", oerr
 	}
-
-	currentBranch, berr := repo.Head()
-	if berr != nil {
-		return "", berr
-	}
-
-	return currentBranch.Branch().Name()
-}
-
-func GitCreateBranchFromHead(repoPath string, localBranchName string) (string, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
-	if oerr != nil {
-		return "", oerr
-	}
-
-	// Lookup head commit
-	commitHead, herr := repo.Head()
+	head, herr := repo.Head()
 	if herr != nil {
 		return "", herr
 	}
+	return head.Name().Short(), nil
+}
 
-	commit, lerr := repo.LookupCommit(commitHead.Target())
-	if lerr != nil {
-		return "", lerr
+//create  branch (does not checkout)
+func GitCreateBranchFromHead(repoPath string, localBranchName string) (string, error) {
+	repo, oerr := git.PlainOpen(repoPath)
+	if oerr != nil {
+		return "", oerr
 	}
-	newLocalBranch, err := repo.CreateBranch(localBranchName, commit, false)
+
+	err := repo.CreateBranch(&config.Branch{
+		Name:  localBranchName,
+		Merge: plumbing.NewBranchReferenceName(localBranchName),
+	})
 	if err != nil {
-		log.Print("Failed to create local branch: " + localBranchName)
 		return "", err
 	}
-	return newLocalBranch.Name()
+	return localBranchName, nil
 }

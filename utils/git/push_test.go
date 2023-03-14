@@ -2,8 +2,8 @@ package git
 
 import (
 	"fmt"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/require"
-	git "gopkg.in/libgit2/git2go.v25"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -29,15 +29,14 @@ func TestGitPush(t *testing.T) {
 	//commit test file
 	//create test tag
 	localBranchName := "local_new_branch_push_pr_testing"
-	srcPatternTmpl := "refs/pull/%s/merge"
-	destPatternTmpl := "refs/remotes/origin/pr/%s/merge"
-	err = GitFetchPullRequest(absPath, "1", localBranchName, srcPatternTmpl, destPatternTmpl)
+
+	err = GitFetchPullRequest(absPath, "1", localBranchName, "", "")
 	require.NoError(t, err)
 
 	err = ioutil.WriteFile(path.Join(absPath, "test.txt"), []byte("test"), 0644)
 	require.NoError(t, err)
 
-	sig := git.Signature{Name: "test", Email: "test@example.com", When: time.Date(2023, 1, 1, 1, 1, 1, 1, time.UTC)}
+	sig := object.Signature{Name: "test", Email: "test@example.com", When: time.Date(2023, 1, 1, 1, 1, 1, 1, time.UTC)}
 	err = GitCommit(absPath, "test commit", &sig)
 	require.NoError(t, err)
 
