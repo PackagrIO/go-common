@@ -1,6 +1,6 @@
 module github.com/packagrio/go-common
 
-go 1.13
+go 1.18
 
 require (
 	github.com/analogj/go-util v0.0.0-20200905200945-3b93d31215ae

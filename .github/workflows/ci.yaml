@@ -6,7 +6,7 @@ jobs:
   build-test:
     name: Test
     runs-on: ubuntu-latest
-    container: ghcr.io/packagrio/packagr:latest-golang
+    container: golang:1.18
     env:
       # gives write access to PackagrIO/test_npm_private_repo
       # https://github.com/organizations/PackagrIO/settings/personal-access-tokens
