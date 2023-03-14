@@ -6,5 +6,5 @@ docker run --rm -it \
   -w /go/src/github.com/packagrio/go-common \
   ghcr.io/packagrio/packagr-dev:master bash
 
-
+./ci/test-build.sh
 ```
