@@ -5,6 +5,7 @@ import (
 	goUtils "github.com/analogj/go-util/utils"
 	"github.com/go-git/go-git/v5"
 	"github.com/packagrio/go-common/errors"
+	gitUrl "github.com/whilp/git-urls"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,8 +23,15 @@ func GitClone(parentPath string, repositoryName string, gitRemote string) (strin
 		return "", errors.ScmFilesystemError(fmt.Sprintf("The local repository path already exists, this should never happen. %s", absPath))
 	}
 
-	_, err := git.PlainClone(absPath, false, &git.CloneOptions{
-		URL:      gitRemote,
+	gitRemoteUrl, err := gitUrl.Parse(gitRemote)
+	if err != nil {
+		return "", errors.ScmUnspecifiedError(fmt.Sprintf("Unable to parse git remote url. %s", err))
+	}
+
+	_, err = git.PlainClone(absPath, false, &git.CloneOptions{
+		URL:             gitRemoteUrl.String(),
+		InsecureSkipTLS: false,
+		//Auth:            auth, //unncessary, Basic auth is correctly extracted from the gitRemote url.
 		Progress: os.Stdout,
 	})
 

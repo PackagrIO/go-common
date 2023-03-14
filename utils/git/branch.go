@@ -16,7 +16,7 @@ func GitGetBranch(repoPath string) (string, error) {
 	if herr != nil {
 		return "", herr
 	}
-	return head.Name().String(), nil
+	return head.Name().Short(), nil
 }
 
 //create  branch (does not checkout)

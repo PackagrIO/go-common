@@ -1,8 +1,8 @@
 package git
 
 import (
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/require"
-	git "gopkg.in/libgit2/git2go.v25"
 	"io/ioutil"
 	"os"
 	"path"
@@ -42,7 +42,7 @@ func TestGitCommit(t *testing.T) {
 	//using a constant signature so that the commit hash is always the same.
 	err = ioutil.WriteFile(path.Join(absPath, "test.txt"), []byte("test"), 0644)
 	require.NoError(t, err)
-	sig := git.Signature{Name: "test", Email: "test@example.com", When: time.Date(2023, 1, 1, 1, 1, 1, 1, time.UTC)}
+	sig := object.Signature{Name: "test", Email: "test@example.com", When: time.Date(2023, 1, 1, 1, 1, 1, 1, time.UTC)}
 	err = GitCommit(absPath, "test commit", &sig)
 	require.NoError(t, err)
 	headCommit, err := GitGetHeadCommit(absPath)
