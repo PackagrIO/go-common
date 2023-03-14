@@ -1,12 +1,12 @@
 package git
 
 import (
-	git2go "gopkg.in/libgit2/git2go.v25"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"time"
 )
 
-func GitSignature(authorName string, authorEmail string) *git2go.Signature {
-	return &git2go.Signature{
+func GitSignature(authorName string, authorEmail string) *object.Signature {
+	return &object.Signature{
 		Name:  authorName,
 		Email: authorEmail,
 		When:  time.Now(),

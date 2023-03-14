@@ -1,6 +1,9 @@
 package git
 
-import git2go "gopkg.in/libgit2/git2go.v25"
+import (
+	"github.com/go-git/go-git/v5"
+	git2go "gopkg.in/libgit2/git2go.v25"
+)
 
 //Add all modified files to index, and commit.
 func GitCommit(repoPath string, message string, signature *git2go.Signature) error {
@@ -49,7 +52,7 @@ func GitCommit(repoPath string, message string, signature *git2go.Signature) err
 }
 
 func GitGetHeadCommit(repoPath string) (string, error) {
-	repo, oerr := git2go.OpenRepository(repoPath)
+	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return "", oerr
 	}
@@ -57,10 +60,9 @@ func GitGetHeadCommit(repoPath string) (string, error) {
 	if herr != nil {
 		return "", herr
 	}
-
-	commit, lerr := repo.LookupCommit(commitHead.Target())
+	commitObject, lerr := repo.CommitObject(commitHead.Hash())
 	if lerr != nil {
 		return "", lerr
 	}
-	return commit.Id().String(), nil
+	return commitObject.Hash.String(), nil
 }
