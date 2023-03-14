@@ -18,7 +18,7 @@ func GitPush(repoPath string, localBranch string, remoteUrl string, remoteBranch
 	}
 
 	// Push
-	remote, rerr := repo.CreateRemoteAnonymous(&config.RemoteConfig{
+	remote, rerr := repo.CreateRemote(&config.RemoteConfig{
 		Name: "anonymous",
 		URLs: []string{remoteUrl},
 	})
@@ -34,6 +34,7 @@ func GitPush(repoPath string, localBranch string, remoteUrl string, remoteBranch
 		config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tagName, tagName)),
 	}
 	return remote.Push(&git.PushOptions{
+		RemoteName:      "anonymous",
 		RefSpecs:        pushSpecs,
 		InsecureSkipTLS: true,
 	})
