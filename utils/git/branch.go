@@ -26,23 +26,6 @@ func GitCreateBranchFromHead(repoPath string, localBranchName string) (string, e
 		return "", oerr
 	}
 
-	//// Lookup head commit
-	//commitHead, herr := repo.Head()
-	//if herr != nil {
-	//	return "", herr
-	//}
-	//
-	//commit, lerr := repo.LookupCommit(commitHead.Target())
-	//if lerr != nil {
-	//	return "", lerr
-	//}
-	//newLocalBranch, err := repo.CreateBranch(localBranchName, commit, false)
-
-	//commitHead, herr := repo.Head()
-	//if herr != nil {
-	//	return "", herr
-	//}
-
 	err := repo.CreateBranch(&config.Branch{
 		Name:  localBranchName,
 		Merge: plumbing.NewBranchReferenceName(localBranchName),
@@ -51,24 +34,4 @@ func GitCreateBranchFromHead(repoPath string, localBranchName string) (string, e
 		return "", err
 	}
 	return localBranchName, nil
-
-	//
-	//workTree, err := repo.Worktree()
-	//if err != nil {
-	//	return "", err
-	//}
-	//localBranchRef := plumbing.NewBranchReferenceName(localBranchName)
-	//err = workTree.Checkout(&git.CheckoutOptions{
-	//	Hash:   commitHead.Hash(), //plumbing.NewHash(),
-	//	Branch: localBranchRef,
-	//	Force:  true,
-	//	Keep:   false,
-	//	Create: true,
-	//})
-	//
-	//if err != nil {
-	//	log.Print("Failed to create local branch: " + localBranchName)
-	//	return "", err
-	//}
-	//return localBranchRef.Short(), nil
 }

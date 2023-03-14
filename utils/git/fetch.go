@@ -38,10 +38,6 @@ func GitFetchPullRequest(repoPath string, pullRequestNumber string, localBranchN
 		return oerr
 	}
 
-	//checkoutOpts := &git2go.CheckoutOpts{
-	//	Strategy: git2go.CheckoutSafe | git2go.CheckoutRecreateMissing | git2go.CheckoutAllowConflicts | git2go.CheckoutUseTheirs,
-	//}
-
 	remote, lerr := repo.Remote("origin")
 	if lerr != nil {
 		log.Print("Failed to lookup origin remote")
