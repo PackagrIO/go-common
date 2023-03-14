@@ -64,22 +64,21 @@ func TestGitGetTagDetails_Annotated(t *testing.T) {
 	require.Equal(t, "971b29d2f4d2d3797fe5b44488e12d1865ff71d0", tagDetails.CommitSha)
 }
 
-//TODO: enable this
-//func TestGitFindNearestTagName(t *testing.T) {
-//	//setup
-//	gitRemote := "https://github.com/AnalogJ/npm_analogj_test.git"
-//	parentPath := os.TempDir()
-//	repoName := "test_repo"
-//	absPath, err := GitClone(parentPath, repoName, gitRemote)
-//	require.NoError(t, err)
-//	defer os.RemoveAll(absPath)
-//	err = GitCheckout(absPath, "nearest_tag")
-//	require.NoError(t, err)
-//
-//	//test
-//	nearestTag, err := GitFindNearestTagName(absPath)
-//	require.NoError(t, err)
-//
-//	//assert
-//	require.Equal(t, "v1.0.9", nearestTag)
-//}
+func TestGitFindNearestTagName(t *testing.T) {
+	//setup
+	gitRemote := "https://github.com/AnalogJ/npm_analogj_test.git"
+	parentPath := os.TempDir()
+	repoName := "test_repo"
+	absPath, err := GitClone(parentPath, repoName, gitRemote)
+	require.NoError(t, err)
+	defer os.RemoveAll(absPath)
+	err = GitCheckout(absPath, "nearest_tag")
+	require.NoError(t, err)
+
+	//test
+	nearestTag, err := GitFindNearestTagName(absPath)
+	require.NoError(t, err)
+
+	//assert
+	require.Equal(t, "v1.0.9", nearestTag)
+}
