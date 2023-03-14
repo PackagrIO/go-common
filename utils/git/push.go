@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+// push local branch and tag to remote repository
+// remoteUrl should include embededd username and password, but can also use ssh credentials.
 func GitPush(repoPath string, localBranch string, remoteUrl string, remoteBranch string, tagName string) error {
 	//- https://gist.github.com/danielfbm/37b0ca88b745503557b2b3f16865d8c3
 	//- https://stackoverflow.com/questions/37026399/git2go-after-createcommit-all-files-appear-like-being-added-for-deletion
