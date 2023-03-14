@@ -13,6 +13,7 @@ import (
 // https://github.com/Devying/git2go-example/blob/master/fetch1.go
 //https://github.com/jandre/passward/blob/e37bce388cf6417d7123c802add1937574c2b30e/passward/git.go#L186-L206
 // https://github.com/electricbookworks/electric-book-gui/blob/4d9ad588dbdf7a94345ef10a1bb6944bc2a2f69a/src/go/src/ebw/git/RepoConflict.go
+// Deprecated: Use GitFetchPullRequest instead
 func GitMergeRemoteBranch(repoPath string, localBranchName string, baseBranchName string, remoteUrl string, remoteBranchName string, signature *git2go.Signature) error {
 
 	checkoutOpts := &git2go.CheckoutOpts{
