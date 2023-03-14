@@ -3,7 +3,7 @@ package github
 import (
 	"encoding/json"
 	"github.com/analogj/go-util/utils"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/packagrio/go-common/pipeline"
 	"github.com/packagrio/go-common/scm/models"
 )
