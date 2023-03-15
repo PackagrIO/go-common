@@ -49,5 +49,15 @@ func GitCheckout(repoPath string, branchName string) error {
 		log.Print("Failed to checkout branch: " + branchName)
 		return err
 	}
+
+	//Link local branch to remote branch
+	//https://github.com/go-git/go-git/issues/241
+
+	newReference := plumbing.NewSymbolicReference(localBranchRef, remoteBranch.Name())
+	err = repo.Storer.SetReference(newReference)
+	if err != nil {
+		log.Print("Failed to link local branch to remote during checkout: " + branchName)
+		return err
+	}
 	return nil
 }
