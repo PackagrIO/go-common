@@ -35,3 +35,17 @@ func TestGitGenerateChangelog(t *testing.T) {
 2019-10-03T15:35Z | f6f820c1 | Update README.md | Jason Kulatunga
 `, changelog)
 }
+
+// Validate handling of commit messages from PR squash merges.
+// Github creates squash commits with cr/lf line endings and creates a list of all squashed commit messages using asterisk list headers.
+func TestCleanCommitMessageFromSquash(t *testing.T) {
+
+	//setup
+	squashCommit := "Commit a (#13)\n\n* Commit a\r\n\r\n* commit b\r\n\r\n* another commit"
+
+	//test
+	cleanedMsg := cleanCommitMessage(squashCommit)
+
+	//assert
+	require.Equal(t, "Commit a (#13)<li>Commit a<li>commit b<li>another commit", cleanedMsg)
+}
