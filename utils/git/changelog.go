@@ -2,15 +2,17 @@ package git
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	goUtils "github.com/analogj/go-util/utils"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/storer"
-	"strings"
 )
 
-//https://github.com/go-git/go-git/issues/36
+// https://github.com/go-git/go-git/issues/36
 func GitGenerateChangelog(repoPath string, baseSha string, headSha string) (string, error) {
 	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
@@ -64,7 +66,17 @@ func cleanCommitMessage(commitMessage string) string {
 		return "--"
 	}
 
+	// replace pipe characters as they delimit table colums in markdown
 	commitMessage = strings.Replace(commitMessage, "|", "/", -1)
+
+	// normalize and squash consecutive newlines to single linefeed character
+	re := regexp.MustCompile(`(\r?\n)+`)
+	commitMessage = re.ReplaceAllString(commitMessage, "\n")
+
+	// assume lines starting with '* ' are bullet lists resulting from squashed commits
+	commitMessage = strings.Replace(commitMessage, "\n* ", "<li>", -1)
+
+	// clean up remaining newline characters
 	commitMessage = strings.Replace(commitMessage, "\n", " ", -1)
 
 	return commitMessage
