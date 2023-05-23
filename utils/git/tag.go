@@ -2,11 +2,13 @@ package git
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/packagrio/go-common/pipeline"
-	"log"
 )
 
 func GitTag(repoPath string, version string, message string, signature *object.Signature) (string, error) {
@@ -88,29 +90,22 @@ func GitGetTagDetails(repoPath string, tagName string) (*pipeline.GitTagDetails,
 // Get the nearest tag on branch.
 // tag must be nearest, ie. sorted by their distance from the HEAD of the branch, not the date or tagname.
 // basically `git describe --tags --abbrev=0`
-//https://github.com/go-git/go-git/pull/584
+// https://github.com/go-git/go-git/pull/584
 func GitFindNearestTagName(repoPath string) (string, error) {
 	repo, oerr := git.PlainOpen(repoPath)
 	if oerr != nil {
 		return "", oerr
 	}
 
-	//get the previous commit
-	ref, lerr := repo.Head()
-	if lerr != nil {
-		return "", lerr
+	// We assume HEAD is the commit of the new release and already tagged by packagr-releasr,
+	// thus the search for nearest tag is started from HEAD^
+	// see also https://github.com/PackagrIO/go-common/commit/867857047ac8f592b6fe64fde5630f38876b2656
+	parentCommit, err := repo.ResolveRevision(plumbing.Revision("HEAD^"))
+	if err != nil {
+		return "", fmt.Errorf("could not get HEAD^ commit: %v", err)
 	}
-	//resRef, err := ref.Resolve()
-	//if err != nil {
-	//	return "", err
-	//}
-	headCommit, cerr := repo.CommitObject(ref.Hash())
-	if cerr != nil {
-		return "", cerr
-	}
-
 	logIter, err := repo.Log(&git.LogOptions{
-		From:  headCommit.Hash,
+		From:  *parentCommit,
 		Order: git.LogOrderCommitterTime,
 	})
 	if err != nil {
@@ -122,16 +117,12 @@ func GitFindNearestTagName(repoPath string) (string, error) {
 		return "", fmt.Errorf("could not build tag ref map: %v", err)
 	}
 
-	distance := 0
-
 	var tagStr string
 	logIter.ForEach(func(c *object.Commit) error {
-		log.Printf("Commit: %s", c.Hash.String())
 		if tag, exists := tags[c.Hash]; exists {
 			tagStr = tag.Name().Short()
-			return fmt.Errorf("found tag") //break
+			return storer.ErrStop
 		}
-		distance++
 		return nil
 	})
 
@@ -141,7 +132,7 @@ func GitFindNearestTagName(repoPath string) (string, error) {
 	return "", fmt.Errorf("could not find latest tag")
 }
 
-//from https://github.com/go-git/go-git/pull/584/files
+// from https://github.com/go-git/go-git/pull/584/files
 func buildTagRefMap(r *git.Repository) (map[plumbing.Hash]*plumbing.Reference, error) {
 	iter, err := r.Tags()
 	if err != nil {
@@ -150,7 +141,7 @@ func buildTagRefMap(r *git.Repository) (map[plumbing.Hash]*plumbing.Reference, e
 	tags := map[plumbing.Hash]*plumbing.Reference{}
 
 	if err := iter.ForEach(func(ref *plumbing.Reference) error {
-		log.Printf("Tag: %s", ref.Name())
+		// log.Printf("Tag: %s", ref.Name())
 		obj, err := r.TagObject(ref.Hash())
 		switch err {
 		case nil:
